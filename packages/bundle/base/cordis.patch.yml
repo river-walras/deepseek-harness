@@ -58,6 +58,30 @@
     - id: agent
       name: '@deepseek-ai/dsh-agent'
 
+    # The transition ring size rests on herdr's EventHub::MAX_EVENTS = 512,
+    # which bounds the same cursor catch-up role. The two peer wait timeouts are
+    # deployment choices: five minutes covers a complete agent turn, while the
+    # finite thirty-minute ceiling prevents a model from parking a call forever.
+    - id: agent-wait-local
+      name: '@deepseek-ai/dsh-agent-wait-local'
+      config:
+        retainedTransitionLimit: 512
+
+    - id: agent-wait-interaction
+      name: '@deepseek-ai/dsh-agent-wait-interaction'
+
+    - id: peer-group-local
+      name: '@deepseek-ai/dsh-peer-group-local'
+      config:
+        defaultWaitTimeoutMs: 300000
+        maxWaitTimeoutMs: 1800000
+
+    - id: command-peer
+      name: '@deepseek-ai/dsh-command-peer'
+
+    - id: tool-peer
+      name: '@deepseek-ai/dsh-tool-peer'
+
     # The transport-independent default for Agents created by entry points.
     # Settings may supply a saved selection; consumers read it at creation time.
     - id: agent-default-model

@@ -7,7 +7,7 @@
 
 已发布插件向 `ctx.tools` 提供的所有面向模型的工具：模型通过系统提示词组装获得的 `name`、`description` 和 JSON Schema `parameters`。本目录是[子系统页面](subsystems/core.md)（类型及每页生成的 `cordis-surface` 接线区域）的补充；本页列出的是向 agent（智能体）提供的*工具*。
 
-英文源文件由系统**生成**，并通过 `pnpm run verify-tool-catalog`（`doc-sync`（文档同步门禁）的一部分）验证新鲜度；本中文文件作为经评审对侧通过双语配对维护。与 Cordis 目录（纯源码 AST 处理）不同，英文生成器会在真实上下文中**启动**每个工具插件并读取 `ctx.tools.schemas()`，因为工具 schema 无法通过静态分析完全确定，例如运行时展开的枚举、拼接的描述、由配置决定的名称以及使用原始 JSON Schema 的 MCP 工具。完整性守卫会 glob 匹配 `packages/*/tool-*`；如果生成器的启动 manifest（元数据清单）遗漏任何包，检查就会失败，因此新工具不会在无人察觉的情况下缺少文档。参见[工具 schema 目录 Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md)。
+英文源文件由系统**生成**，并通过 `pnpm run verify-tool-catalog`（`doc-sync`（文档同步门禁）的一部分）验证新鲜度；本中文文件作为经评审对侧通过双语配对维护。与 Cordis 目录（纯源码 AST 处理）不同，英文生成器会在真实上下文中**启动**每个工具插件并读取 `ctx.tools.schemas()`，因为工具 schema 无法通过静态分析完全确定，例如运行时展开的枚举、拼接的描述、由配置决定的名称以及使用原始 JSON Schema 的 MCP 工具。完整性守卫会 glob 匹配 `packages/*/tool-*`；如果任何包既不在生成器的启动 manifest（元数据清单）中，也不在其严格限定的仅声明例外集合中，检查就会失败，因此新工具不会在无人察觉的情况下缺少文档。参见[工具 schema 目录 Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md)。
 
 范围：`packages/*/tool-*` 下已发布的产品工具，每个工具均使用其**默认**配置启动；但如果某个 Config 字段是**必填项**且没有默认值，生成器就必须作出选择，对应包的说明会记录本页展示的是哪个分支。注册的工具**名称**可以是加载时配置，例如 `tool-subagent` 的 `toolName`，因此部署可能以不同名称或额外名称提供某个包；如果存在随产品发布的别名，对应包的说明会予以记录。`examples/` 中的演示工具（例如 `echo`）不在范围内，这与 Cordis 目录仅涵盖包的范围一致。
 
@@ -31,6 +31,7 @@
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list` | `ctx.tools`、`ctx.sessions`、Session 持久化、未来创建的 live 根 Agent | `tool/call`、`schedule/change create or delete`、`tool/result` | - | 仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
+| `@deepseek-ai/dsh-tool-peer` | `list_peers`、`send_to_peer`、`wait_for_peer` | `ctx.tools`、`ctx.peerGroups`、`a calling root Agent with peer membership` | `tool/call`、`peer message delivery through the target inbox`、`tool/result` | - | `send_to_peer` 默认仅等待投递接受；其可选等待跟随该精确消息轮次。`wait_for_peer` 独立观察状态，`list_peers` 只公开当前共享成员资格。 |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`、`ctx.agents`、`ctx.skills` | `tool/call`、`tool/result`、`user/message replacement catalogs via agent.inject()` | - | - |
 | `@deepseek-ai/dsh-tool-session-query` | `session_event_read`、`session_event_search`、`session_event_trace`、`session_search`、`session_trace` | `ctx.tools`、`ctx.systemPrompt`、`ctx.sessionQuery`、`a calling Agent for workspace authority` | `tool/call`、`tool/result` | - | 这 5 个只读工具会隐藏提供方游标，并根据不可变的调用 agent 会话为每个结果授权。该包需要选择启用；需要强制截止时间或限制行内输出的组合还会挂载通用超时或 spill 策略。 |
@@ -1180,6 +1181,162 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
 来源：[`packages/lsp/tool-lsp/src/index.ts`](../packages/lsp/tool-lsp/src/index.ts)
 
 lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。
+
+<a id="deepseek-aidsh-tool-peer"></a>
+
+## `@deepseek-ai/dsh-tool-peer`
+
+### `list_peers`
+
+列出当前组成员资格可见的同级会话，或选择一个同级会话。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "group": {
+      "type": "string",
+      "description": "Exact group name to list."
+    },
+    "peer": {
+      "type": "object",
+      "description": "The peer session to address, qualified by group when the same sessions share more than one group.",
+      "additionalProperties": false,
+      "properties": {
+        "session": {
+          "type": "string",
+          "description": "Session id shown by list_peers."
+        },
+        "group": {
+          "type": "string",
+          "description": "Exact group name; required only when the peer is otherwise ambiguous."
+        }
+      },
+      "required": [
+        "session"
+      ]
+    }
+  }
+}
+```
+
+源文件：[`packages/peer-group/tool-peer/src/index.ts`](../packages/peer-group/tool-peer/src/index.ts)
+
+### `send_to_peer`
+
+向现有同级 agent 发送消息。不等待时，本工具在投递被接受后立即返回。接受并非回复；同级 agent 的回复通过单独投递到达。仅在本次调用必须跟随已投递消息自身的轮次时提供 `wait`。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "peer": {
+      "type": "object",
+      "description": "The peer session to address, qualified by group when the same sessions share more than one group.",
+      "additionalProperties": false,
+      "properties": {
+        "session": {
+          "type": "string",
+          "description": "Session id shown by list_peers."
+        },
+        "group": {
+          "type": "string",
+          "description": "Exact group name; required only when the peer is otherwise ambiguous."
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "description": "Work or information to send to the peer."
+    },
+    "wait": {
+      "type": "object",
+      "description": "Optional wait tied to this delivered message. Omit it to return immediately after acceptance.",
+      "additionalProperties": false,
+      "properties": {
+        "until": {
+          "type": "array",
+          "description": "States that may complete the wait. Defaults to idle or blocked.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "working",
+              "idle",
+              "blocked"
+            ]
+          }
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "description": "Maximum wait in milliseconds. The deployment supplies the default and maximum."
+        }
+      }
+    }
+  },
+  "required": [
+    "peer",
+    "message"
+  ]
+}
+```
+
+源文件：[`packages/peer-group/tool-peer/src/index.ts`](../packages/peer-group/tool-peer/src/index.ts)
+
+### `wait_for_peer`
+
+等待现有同级 agent 到达某个请求状态。本工具观察同级 agent 状态，不与任何消息关联。初始状态可以立即满足请求。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "peer": {
+      "type": "object",
+      "description": "The peer session to address, qualified by group when the same sessions share more than one group.",
+      "additionalProperties": false,
+      "properties": {
+        "session": {
+          "type": "string",
+          "description": "Session id shown by list_peers."
+        },
+        "group": {
+          "type": "string",
+          "description": "Exact group name; required only when the peer is otherwise ambiguous."
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "until": {
+      "type": "array",
+      "description": "States that may complete the wait. Defaults to idle or blocked.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "working",
+          "idle",
+          "blocked"
+        ]
+      }
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "description": "Maximum wait in milliseconds. The deployment supplies the default and maximum."
+    }
+  },
+  "required": [
+    "peer"
+  ]
+}
+```
+
+源文件：[`packages/peer-group/tool-peer/src/index.ts`](../packages/peer-group/tool-peer/src/index.ts)
+
+`send_to_peer` 默认仅等待投递接受；其可选等待跟随该精确消息轮次。`wait_for_peer` 独立观察状态，`list_peers` 只公开当前共享成员资格。
 
 <a id="deepseek-aidsh-tool-ralph"></a>
 

@@ -305,6 +305,37 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'agentWaits',
+    summary: 'Abstract registry of ephemeral reasons agents are waiting.',
+    description: 'Abstract registry of ephemeral reasons agents are waiting.\n\nImplementations keep one process epoch and a monotonic revision. Snapshot reads use a revision/snapshot/revision retry, while subscribers drain retained transitions after registering so complete transient waits win over a later snapshot. A retention gap returns a replacement snapshot.',
+    methods: [
+      {
+        signature: 'abstract acquire(request: AgentWaitAcquireRequest): AgentWaitLease',
+        description: 'Publish an outstanding wait owned by an exact agent or bounded observation.',
+        parameters: [{ name: 'request', description: 'Wait reason and lifetime owner.' }],
+        returns: 'the idempotent deterministic-release handle.',
+      },
+      {
+        signature: 'abstract snapshot(): AgentWaitSnapshot',
+        description: 'Read a revision-stable projection of every active lease.',
+        parameters: [],
+        returns: 'a fresh immutable snapshot and its process cursor.',
+      },
+      {
+        signature: 'abstract changes(after: AgentWaitCursor): AgentWaitChangeRead',
+        description: 'Read the complete retained suffix after a cursor, or require refresh when the process epoch changed or the caller fell behind retention.',
+        parameters: [{ name: 'after', description: 'Last cursor fully processed by the observer.' }],
+        returns: 'retained transitions or a consistent replacement snapshot.',
+      },
+      {
+        signature: 'abstract onChanged(listener: AgentWaitChangedListener): () => void',
+        description: 'Register an effect-scoped, failure-contained change notification. A consumer closes the snapshot/subscribe race by registering, then calling changes from its snapshot cursor before relying on notifications.',
+        parameters: [{ name: 'listener', description: 'Notification carrying the latest committed cursor; throws and rejections are contained.' }],
+        returns: 'disposer that unregisters the listener.',
+      },
+    ],
+  },
+  {
     key: 'apiProxy',
     summary: 'Root interface of the unified API.',
     description: 'Root interface of the unified API. New client-request domain = one new file pair + one field here + one map row.',
@@ -903,6 +934,59 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Delete one feedback item. Absence is successful regardless of the supplied version; an existing item requires an exact version match.',
         parameters: [{ name: 'request', description: 'Session, message, and observed item version.' }],
         returns: 'the stable absent postcondition, or an explicit failure.',
+      },
+    ],
+  },
+  {
+    key: 'peerGroups',
+    summary: 'Abstract registry for peer membership, authority, delivery, and bounded waits.',
+    description: 'Abstract registry for peer membership, authority, delivery, and bounded waits.\n\nMembership operations admit exact live roots and are exposed only through the human command Consumer. Model-facing Consumers may list and use an existing membership but cannot create, add, remove, or dissolve it.',
+    methods: [
+      {
+        signature: 'abstract resolveWait(options?: PeerWaitOptions): PeerWaitSpec',
+        description: 'Resolve optional wait fields against the provider\'s validated timeout configuration.',
+        parameters: [{ name: 'options', description: 'optional predicate and timeout from a Consumer boundary.' }],
+        returns: 'a non-empty predicate and bounded timeout accepted by operations.',
+      },
+      {
+        signature: 'abstract create(caller: Agent, name: string): Promise<PeerGroupView>',
+        description: 'Create a named group and enroll the invoking live root as its first member.',
+        parameters: [{ name: 'caller', description: 'exact root receiving the human command.' }, { name: 'name', description: 'unique non-empty group name.' }],
+        returns: 'the new group projection.',
+      },
+      {
+        signature: 'abstract add(caller: Agent, groupId: PeerGroupId, sessionId: SessionId): Promise<PeerMemberView>',
+        description: 'Enroll an existing exact live root after workspace write admission.',
+        parameters: [{ name: 'caller', description: 'exact member receiving the human command.' }, { name: 'groupId', description: 'group to change.' }, { name: 'sessionId', description: 'existing root session to enroll.' }],
+        returns: 'the admitted membership projection.',
+      },
+      {
+        signature: 'abstract remove(caller: Agent, groupId: PeerGroupId, sessionId: SessionId): Promise<void>',
+        description: 'Revoke one membership and terminate every wait pinned to its incarnation.',
+        parameters: [{ name: 'caller', description: 'exact member receiving the human command.' }, { name: 'groupId', description: 'group to change.' }, { name: 'sessionId', description: 'enrolled session to remove.' }],
+      },
+      {
+        signature: 'abstract dissolve(caller: Agent, groupId: PeerGroupId): Promise<void>',
+        description: 'Dissolve a group, revoke every grant, and terminate its waits.',
+        parameters: [{ name: 'caller', description: 'exact member receiving the human command.' }, { name: 'groupId', description: 'group to dissolve.' }],
+      },
+      {
+        signature: 'abstract list(caller: Agent, groupId?: PeerGroupId): readonly PeerGroupView[]',
+        description: 'List groups visible to an exact member, optionally narrowing by id.',
+        parameters: [{ name: 'caller', description: 'reading live member.' }, { name: 'groupId', description: 'optional exact group.' }],
+        returns: 'fresh projections without canonical workspace identities.',
+      },
+      {
+        signature: 'abstract send(request: PeerSendRequest): Promise<PeerSendResult>',
+        description: 'Authorize and enqueue one ordinary peer follow-up, optionally waiting for the exact claimed message turn to reach a requested state.',
+        parameters: [{ name: 'request', description: 'caller, peer address, message, optional resolved wait, and cancellation.' }],
+        returns: 'durable acceptance and optional delivery-correlated observation.',
+      },
+      {
+        signature: 'abstract wait(request: PeerWaitRequest): Promise<PeerWaitObservation>',
+        description: 'Install a cycle-checked standalone wait edge and observe the target state.',
+        parameters: [{ name: 'request', description: 'caller, peer address, resolved bounded predicate, and cancellation.' }],
+        returns: 'the matching state for the pinned membership incarnation.',
       },
     ],
   },
@@ -2558,6 +2642,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'exec', description: 'the execution object that traversed the pipeline.' }, { name: 'result', description: 'a deep-frozen snapshot of the final returned result.' }],
   },
   {
+    name: 'user-questions/provider-dispatch',
+    mode: 'emit',
+    signature: '\'user-questions/provider-dispatch\'(lifecycle: UserQuestionDispatchLifecycle): void',
+    summary: 'A validated question request is about to reach its selected provider.',
+    description: 'A validated question request is about to reach its selected provider. Listeners may synchronously defer per-call cleanup. Listener failures are contained and cannot veto provider dispatch.',
+    parameters: [{ name: 'lifecycle', description: '.defer - registers cleanup for provider settlement.' }],
+  },
+  {
     name: 'workflow/agent-end',
     mode: 'emit',
     signature: '\'workflow/agent-end\'(info: WorkflowRunInfo, agent: WorkflowAgentEndInfo): void',
@@ -2648,6 +2740,58 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AgentStatus',
     declaration: 'export type AgentStatus = \'idle\' | \'running\';',
+  },
+  {
+    name: 'AgentWaitAcquireRequest',
+    declaration: 'export interface AgentWaitAcquireRequest {\n    readonly lifetime: AgentWaitLeaseLifetime;\n    readonly reason: AgentWaitReason;\n}',
+  },
+  {
+    name: 'AgentWaitChangedListener',
+    declaration: 'export type AgentWaitChangedListener = (cursor: AgentWaitCursor) => void | PromiseLike<void>;',
+  },
+  {
+    name: 'AgentWaitChangeRead',
+    declaration: 'export type AgentWaitChangeRead = {\n    readonly kind: \'changes\';\n    readonly after: AgentWaitCursor;\n    readonly cursor: AgentWaitCursor;\n    readonly transitions: readonly AgentWaitTransition[];\n} | {\n    readonly kind: \'refresh\';\n    readonly reason: \'epoch-changed\' | \'revision-gap\';\n    readonly snapshot: AgentWaitSnapshot;\n};',
+  },
+  {
+    name: 'AgentWaitCursor',
+    declaration: 'export interface AgentWaitCursor {\n    readonly epoch: AgentWaitEpoch;\n    readonly revision: number;\n}',
+  },
+  {
+    name: 'AgentWaitEpoch',
+    declaration: 'export type AgentWaitEpoch = Branded<\'AgentWaitEpoch\'>;',
+  },
+  {
+    name: 'AgentWaitLease',
+    declaration: 'export interface AgentWaitLease {\n    readonly id: AgentWaitLeaseId;\n    release(): void;\n}',
+  },
+  {
+    name: 'AgentWaitLeaseId',
+    declaration: 'export type AgentWaitLeaseId = Branded<\'AgentWaitLeaseId\'>;',
+  },
+  {
+    name: 'AgentWaitLeaseLifetime',
+    declaration: 'export type AgentWaitLeaseLifetime = {\n    readonly kind: \'agent\';\n    readonly agent: Agent;\n} | {\n    readonly kind: \'observation\';\n    readonly sessionId: SessionId;\n    readonly timeoutMs: number;\n};',
+  },
+  {
+    name: 'AgentWaitLeaseView',
+    declaration: 'export interface AgentWaitLeaseView {\n    readonly id: AgentWaitLeaseId;\n    readonly sessionId: SessionId;\n    readonly reason: AgentWaitReason;\n    readonly lifetime: AgentWaitLeaseLifetime[\'kind\'];\n}',
+  },
+  {
+    name: 'AgentWaitReason',
+    declaration: 'export type AgentWaitReason = \'interaction\' | \'peer\';',
+  },
+  {
+    name: 'AgentWaitSnapshot',
+    declaration: 'export interface AgentWaitSnapshot {\n    readonly cursor: AgentWaitCursor;\n    readonly leases: readonly AgentWaitLeaseView[];\n}',
+  },
+  {
+    name: 'AgentWaitTermination',
+    declaration: 'export type AgentWaitTermination = \'released\' | \'observation-timeout\';',
+  },
+  {
+    name: 'AgentWaitTransition',
+    declaration: 'export type AgentWaitTransition = {\n    readonly kind: \'acquired\';\n    readonly cursor: AgentWaitCursor;\n    readonly lease: AgentWaitLeaseView;\n} | {\n    readonly kind: \'ended\';\n    readonly cursor: AgentWaitCursor;\n    readonly lease: AgentWaitLeaseView;\n    readonly termination: AgentWaitTermination;\n};',
   },
   {
     name: 'ApprovalOutcome',
@@ -3472,6 +3616,82 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'OneShotSubagentDescriptorData',
     declaration: 'export interface OneShotSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'one-shot\';\n    readonly label?: string;\n}',
+  },
+  {
+    name: 'PeerAvailability',
+    declaration: 'export type PeerAvailability = \'live\' | \'inactive\';',
+  },
+  {
+    name: 'PeerDeliveryAcceptance',
+    declaration: 'export interface PeerDeliveryAcceptance {\n    readonly deliveryId: PeerDeliveryId;\n    readonly messageId: MessageId;\n    readonly peer: PeerMembership;\n}',
+  },
+  {
+    name: 'PeerDeliveryId',
+    declaration: 'export type PeerDeliveryId = Branded<\'PeerDeliveryId\'>;',
+  },
+  {
+    name: 'PeerExecutionStatus',
+    declaration: 'export type PeerExecutionStatus = {\n    readonly state: \'working\';\n} | {\n    readonly state: \'idle\';\n} | {\n    readonly state: \'blocked\';\n    readonly reason: AgentWaitReason;\n};',
+  },
+  {
+    name: 'PeerGroupId',
+    declaration: 'export type PeerGroupId = Branded<\'PeerGroupId\'>;',
+  },
+  {
+    name: 'PeerGroupView',
+    declaration: 'export interface PeerGroupView {\n    readonly id: PeerGroupId;\n    readonly name: string;\n    readonly members: readonly PeerMemberView[];\n}',
+  },
+  {
+    name: 'PeerMembership',
+    declaration: 'export interface PeerMembership {\n    readonly groupId: PeerGroupId;\n    readonly sessionId: SessionId;\n    readonly incarnation: PeerMembershipIncarnation;\n}',
+  },
+  {
+    name: 'PeerMembershipIncarnation',
+    declaration: 'export type PeerMembershipIncarnation = Branded<\'PeerMembershipIncarnation\'>;',
+  },
+  {
+    name: 'PeerMemberView',
+    declaration: 'export interface PeerMemberView extends PeerMembership {\n    readonly title?: string;\n    readonly workspace?: string;\n    readonly availability: PeerAvailability;\n    readonly execution?: PeerExecutionStatus;\n    readonly writeAccess: PeerWriteAccess;\n}',
+  },
+  {
+    name: 'PeerRef',
+    declaration: 'export interface PeerRef {\n    readonly group?: PeerGroupId;\n    readonly session: SessionId;\n}',
+  },
+  {
+    name: 'PeerSendRequest',
+    declaration: 'export interface PeerSendRequest {\n    readonly caller: Agent;\n    readonly peer: PeerRef;\n    readonly message: string;\n    readonly wait?: PeerWaitSpec;\n    readonly signal?: AbortSignal;\n}',
+  },
+  {
+    name: 'PeerSendResult',
+    declaration: 'export interface PeerSendResult {\n    readonly delivery: PeerDeliveryAcceptance;\n    readonly settled?: PeerWaitObservation & {\n        readonly turn: number;\n    };\n}',
+  },
+  {
+    name: 'PeerWaitId',
+    declaration: 'export type PeerWaitId = Branded<\'PeerWaitId\'>;',
+  },
+  {
+    name: 'PeerWaitObservation',
+    declaration: 'export interface PeerWaitObservation {\n    readonly waitId: PeerWaitId;\n    readonly peer: PeerMembership;\n    readonly execution: PeerExecutionStatus;\n}',
+  },
+  {
+    name: 'PeerWaitOptions',
+    declaration: 'export interface PeerWaitOptions {\n    readonly until?: readonly PeerWaitState[];\n    readonly timeoutMs?: number;\n}',
+  },
+  {
+    name: 'PeerWaitRequest',
+    declaration: 'export interface PeerWaitRequest {\n    readonly caller: Agent;\n    readonly peer: PeerRef;\n    readonly wait: PeerWaitSpec;\n    readonly signal?: AbortSignal;\n}',
+  },
+  {
+    name: 'PeerWaitSpec',
+    declaration: 'export interface PeerWaitSpec {\n    readonly until: readonly [\n        PeerWaitState,\n        ...PeerWaitState[]\n    ];\n    readonly timeoutMs: number;\n}',
+  },
+  {
+    name: 'PeerWaitState',
+    declaration: 'export type PeerWaitState = \'working\' | \'idle\' | \'blocked\';',
+  },
+  {
+    name: 'PeerWriteAccess',
+    declaration: 'export type PeerWriteAccess = \'write-capable\' | \'read-only\';',
   },
   {
     name: 'PermissionSelect',
@@ -4524,6 +4744,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UserMessage',
     declaration: 'export interface UserMessage extends Message {\n    readonly role: \'user\';\n}',
+  },
+  {
+    name: 'UserQuestionDispatchLifecycle',
+    declaration: 'export interface UserQuestionDispatchLifecycle {\n    readonly request: AskUserQuestionRequest;\n    defer(release: UserQuestionDispatchRelease): void;\n}',
+  },
+  {
+    name: 'UserQuestionDispatchRelease',
+    declaration: 'export type UserQuestionDispatchRelease = () => void;',
   },
   {
     name: 'UserQuestionProvider',

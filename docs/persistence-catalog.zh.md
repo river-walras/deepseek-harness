@@ -496,6 +496,23 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源：[`packages/llm/llm-retry/src/types.ts:11`](../packages/llm/llm-retry/src/types.ts)
 
+### `peer-group/*`
+
+<a id="peer-groupmembership-removed--log-only"></a>
+
+#### `peer-group/membership-removed` — log-only
+
+```ts persistence-catalog
+/** Informational record that a later policy change revoked this membership. */
+'peer-group/membership-removed': {
+  readonly groupId: PeerGroupId
+  readonly incarnation: PeerMembershipIncarnation
+  readonly reason: 'second-writer'
+}
+```
+
+来源：[`packages/peer-group/peer-group/src/types.ts:173`](../packages/peer-group/peer-group/src/types.ts)
+
 ### `permission/*`
 
 <a id="permissionpreset--log-only"></a>

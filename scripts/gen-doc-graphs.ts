@@ -65,6 +65,7 @@ const GROUP_ORDER = [
   'attachment',
   'llm',
   'core',
+  'agent-wait',
   'typert',
   'goal',
   'process',
@@ -76,6 +77,7 @@ const GROUP_ORDER = [
   'skill',
   'compact',
   'subagent',
+  'peer-group',
   'tasks',
   'workflow',
   'web',
@@ -332,6 +334,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Owns live Agent handles, the create/resume factory seam, and process-local initiator propagation.',
   },
   {
+    key: 'agentWaits',
+    pkg: 'agent-wait',
+    title: 'Ephemeral Agent wait observation',
+    mode: 'seam',
+    implementations: ['agent-wait-local'],
+    consumers: ['agent-wait-interaction', 'peer-group-local'],
+    note: 'The process-local provider publishes revisioned interaction and peer leases; Consumers derive leases from authoritative lifecycles and observe them without changing durable Agent status.',
+  },
+  {
     key: 'agentDefaultModel',
     pkg: 'agent-default-model',
     title: 'Default Agent model selection',
@@ -468,6 +479,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     implementations: ['subagent-spawn-in-process', 'subagent-fork-in-process', 'subagent-acp', 'subagent-codex', 'subagent-claude-code', 'subagent-dsh-sdk'],
     consumers: ['tool-subagent', 'tool-subagent-control', 'tool-ralph'],
     note: 'Providers implement transports; the service also owns optional Activation-based continuation orchestration, tool-subagent selects one-shot or continuable delegation, tool-subagent-control delivers follow-ups, and tool-ralph requires one fresh structured-output route.',
+  },
+  {
+    key: 'peerGroups',
+    pkg: 'peer-group',
+    title: 'Cross-session peer collaboration',
+    mode: 'seam',
+    implementations: ['peer-group-local'],
+    consumers: ['command-peer', 'tool-peer'],
+    note: 'The process-local provider owns human-formed root membership, group-qualified grants, ordinary follow-up delivery, and bounded wait edges; command-peer changes membership and tool-peer uses existing grants.',
   },
   {
     key: 'jobs',
@@ -1180,6 +1200,7 @@ function listenerPackages(listeners: Set<string>, pkgsByShort: Map<string, Pkg>)
 function renderEventRelations(pkgs: Pkg[], events: readonly EventEntry[]): string {
   const relations = collectEventRelations()
   const pkgsByShort = new Map(pkgs.map(pkg => [pkg.short, pkg]))
+  const declared = new Set(events.map(event => event.name))
   const maintenance = 'generated: Cordis event declarations and producer/listener edges are resolved from the repository TypeScript Program'
   const lines = generatedHeader('Event Producer And Consumer Matrix')
   lines.push(
@@ -1210,7 +1231,6 @@ function renderEventRelations(pkgs: Pkg[], events: readonly EventEntry[]): strin
       + '(teach scripts/gen-doc-graphs.ts that form)',
     )
   }
-  const declared = new Set(events.map(event => event.name))
   const extra = [...relations.keys()].filter(event => !declared.has(event)).sort()
   if (extra.length > 0) {
     lines.push('', '## Non-harness or undeclared event strings seen in package source', '', '| Event string | Dispatchers | Listeners |', '| --- | --- | --- |')

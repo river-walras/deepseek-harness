@@ -649,16 +649,52 @@ function rawSessionLog(session: Session): string {
  * @param fixturePath - the committed session.jsonl / seed.jsonl target.
  */
 export async function recordFixture(scaffold: WebScaffold, sessionId: SessionId, fixturePath: string): Promise<void> {
-  const agent = scaffold.ctx.agents.get(sessionId)
-  if (agent === undefined) throw new Error(`record harvest: no live agent for ${sessionId}`)
-  const fresh = scrubRequestHeaders(rawSessionLog(agent.session))
-    .split(sessionId).join('{{sessionId}}')
-    .split(scaffold.workspaceCwd).join('{{cwd}}')
-    .replace(/"rpcId":"[^"]+"/g, '"rpcId":"{{rpcId}}"')
-  const existing = existsSync(fixturePath) ? await readFile(fixturePath, 'utf8') : ''
-  const stable = stabilizeFixtureMessageIds([fresh], [existing])[0]
-  if (stable === undefined) throw new Error('record harvest: no stabilized fixture')
-  await writeFile(fixturePath, stable)
+  await recordFixtureSet(scaffold, [{ sessionId, fixturePath, token: '{{sessionId}}' }])
+}
+
+/** One live session and its destination in a multi-session recording. */
+export interface FixtureRecording {
+  /** Live session to harvest. */
+  readonly sessionId: SessionId
+  /** Committed JSONL destination. */
+  readonly fixturePath: string
+  /** Optional stable token replacing this id in every harvested log. */
+  readonly token?: string
+}
+
+/**
+ * Record a correlated set of root-session fixtures with shared identity substitutions.
+ * A fixed test-owned id may omit `token`; volatile ids receive caller-chosen distinct
+ * tokens so lateral attribution remains consistent across every fixture.
+ * @param scaffold - the record-mode scaffold.
+ * @param recordings - live sessions, destinations, and optional shared id tokens.
+ */
+export async function recordFixtureSet(
+  scaffold: WebScaffold,
+  recordings: readonly FixtureRecording[],
+): Promise<void> {
+  if (recordings.length === 0) throw new Error('record harvest: fixture set must not be empty')
+  const tokens = recordings.flatMap(recording => recording.token === undefined
+    ? []
+    : [[recording.sessionId, recording.token] as const])
+  const fresh = recordings.map((recording) => {
+    const agent = scaffold.ctx.agents.get(recording.sessionId)
+    if (agent === undefined) throw new Error(`record harvest: no live agent for ${recording.sessionId}`)
+    let log = scrubRequestHeaders(rawSessionLog(agent.session))
+      .split(scaffold.workspaceCwd).join('{{cwd}}')
+      .replace(/"rpcId":"[^"]+"/g, '"rpcId":"{{rpcId}}"')
+    for (const [sessionId, token] of tokens) log = log.split(sessionId).join(token)
+    return log
+  })
+  const existing = await Promise.all(recordings.map(recording => existsSync(recording.fixturePath)
+    ? readFile(recording.fixturePath, 'utf8')
+    : Promise.resolve('')))
+  const stable = stabilizeFixtureMessageIds(fresh, existing)
+  await Promise.all(recordings.map(async (recording, index) => {
+    const fixture = stable[index]
+    if (fixture === undefined) throw new Error(`record harvest: no stabilized fixture at index ${index}`)
+    await writeFile(recording.fixturePath, fixture)
+  }))
 }
 
 /**

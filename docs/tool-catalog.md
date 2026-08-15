@@ -5,7 +5,7 @@
 
 Every model-facing tool a shipped plugin contributes to `ctx.tools`: the `name`, `description`, and JSON-Schema `parameters` the model receives via the system-prompt assembly. It complements the [subsystem pages](subsystems/core.md) (the types plus each page's generated Cordis API region) — this page is the *tools* the agent is offered.
 
-This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is missing from the generator's boot manifest, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).
+This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is absent from either the generator's boot manifest or its narrow declaration-only exception set, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).
 
 Scope: shipped product tools under `packages/*/tool-*`, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog's packages-only scope.
 
@@ -29,6 +29,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`, `get_goal`, `update_goal` | `ctx.tools`, `ctx.agents`, `ctx.goals`, `ctx.systemPrompt`, `a calling Agent in an authorized open turn` | `tool/call`, `goal/change for mutations`, `tool/result` | - | create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds. |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`, `schedule_delete`, `schedule_list` | `ctx.tools`, `ctx.sessions`, `Session persistence`, `a future live root Agent` | `tool/call`, `schedule/change create or delete`, `tool/result` | - | Registered only inside live root Agent scopes created after the opt-in Schedule plugin loads. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, and discloses session-local delivery; management reads and mutations require the shared Session persistence barrier. |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`, `ctx.lsp`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema. |
+| `@deepseek-ai/dsh-tool-peer` | `list_peers`, `send_to_peer`, `wait_for_peer` | `ctx.tools`, `ctx.peerGroups`, `a calling root Agent with peer membership` | `tool/call`, `peer message delivery through the target inbox`, `tool/result` | - | send_to_peer defaults to delivery acceptance without waiting; its optional wait follows that exact message turn. wait_for_peer observes state independently, and list_peers exposes only current shared memberships. |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`, `ctx.workflowEngine`, `ctx.subagents`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents every fresh round)` | `tool/call`, `tool/result`, `workflow and child session events during execution` | - | A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap. |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`, `ctx.agents`, `ctx.skills` | `tool/call`, `tool/result`, `user/message replacement catalogs via agent.inject()` | - | - |
 | `@deepseek-ai/dsh-tool-session-query` | `session_event_read`, `session_event_search`, `session_event_trace`, `session_search`, `session_trace` | `ctx.tools`, `ctx.systemPrompt`, `ctx.sessionQuery`, `a calling Agent for workspace authority` | `tool/call`, `tool/result` | - | The five read-only tools hide provider cursors and authorize every result from the immutable calling agent session. The package is opt-in; compositions that need enforced deadlines or bounded inline output also mount the generic timeout or spill policies. |
@@ -1176,6 +1177,162 @@ Query a language server for precise code navigation. operation is one of goToDef
 Source: [`packages/lsp/tool-lsp/src/index.ts`](../packages/lsp/tool-lsp/src/index.ts)
 
 The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema.
+
+<a id="deepseek-aidsh-tool-peer"></a>
+
+## `@deepseek-ai/dsh-tool-peer`
+
+### `list_peers`
+
+List peer sessions visible through current group membership, or select one peer session.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "group": {
+      "type": "string",
+      "description": "Exact group name to list."
+    },
+    "peer": {
+      "type": "object",
+      "description": "The peer session to address, qualified by group when the same sessions share more than one group.",
+      "additionalProperties": false,
+      "properties": {
+        "session": {
+          "type": "string",
+          "description": "Session id shown by list_peers."
+        },
+        "group": {
+          "type": "string",
+          "description": "Exact group name; required only when the peer is otherwise ambiguous."
+        }
+      },
+      "required": [
+        "session"
+      ]
+    }
+  }
+}
+```
+
+Source: [`packages/peer-group/tool-peer/src/index.ts`](../packages/peer-group/tool-peer/src/index.ts)
+
+### `send_to_peer`
+
+Send a message to an existing peer. Without wait, this returns as soon as delivery is accepted. Acceptance is not a reply; a peer reply arrives through a separate delivery. Supply wait only when this call must follow the delivered message through its own turn.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "peer": {
+      "type": "object",
+      "description": "The peer session to address, qualified by group when the same sessions share more than one group.",
+      "additionalProperties": false,
+      "properties": {
+        "session": {
+          "type": "string",
+          "description": "Session id shown by list_peers."
+        },
+        "group": {
+          "type": "string",
+          "description": "Exact group name; required only when the peer is otherwise ambiguous."
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "description": "Work or information to send to the peer."
+    },
+    "wait": {
+      "type": "object",
+      "description": "Optional wait tied to this delivered message. Omit it to return immediately after acceptance.",
+      "additionalProperties": false,
+      "properties": {
+        "until": {
+          "type": "array",
+          "description": "States that may complete the wait. Defaults to idle or blocked.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "working",
+              "idle",
+              "blocked"
+            ]
+          }
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "description": "Maximum wait in milliseconds. The deployment supplies the default and maximum."
+        }
+      }
+    }
+  },
+  "required": [
+    "peer",
+    "message"
+  ]
+}
+```
+
+Source: [`packages/peer-group/tool-peer/src/index.ts`](../packages/peer-group/tool-peer/src/index.ts)
+
+### `wait_for_peer`
+
+Wait until an existing peer reaches one of the requested states. This observes peer state and is not correlated to any message. The initial state may satisfy the request immediately.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "peer": {
+      "type": "object",
+      "description": "The peer session to address, qualified by group when the same sessions share more than one group.",
+      "additionalProperties": false,
+      "properties": {
+        "session": {
+          "type": "string",
+          "description": "Session id shown by list_peers."
+        },
+        "group": {
+          "type": "string",
+          "description": "Exact group name; required only when the peer is otherwise ambiguous."
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "until": {
+      "type": "array",
+      "description": "States that may complete the wait. Defaults to idle or blocked.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "working",
+          "idle",
+          "blocked"
+        ]
+      }
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "description": "Maximum wait in milliseconds. The deployment supplies the default and maximum."
+    }
+  },
+  "required": [
+    "peer"
+  ]
+}
+```
+
+Source: [`packages/peer-group/tool-peer/src/index.ts`](../packages/peer-group/tool-peer/src/index.ts)
+
+send_to_peer defaults to delivery acceptance without waiting; its optional wait follows that exact message turn. wait_for_peer observes state independently, and list_peers exposes only current shared memberships.
 
 <a id="deepseek-aidsh-tool-ralph"></a>
 

@@ -119,6 +119,19 @@ interface UserQuestionProvider {
 }
 ```
 
+## 提供方派发生命周期
+
+`user-questions/provider-dispatch` 只观察完成验证和提供方选择的请求。事件在 `provider.ask()` 之前立即运行，并让监听器延后单次调用清理；该清理会在调用结算后恰好运行一次。监听器失败会被隔离，无法否决派发。派发前的 `ASK_ABORTED`、`CALLER_NOT_LIVE`、`DELEGATED_CALLER`、`EMPTY_QUESTIONS`、`BAD_INTENT` 和 `NO_PROVIDER` 失败不会发出事件，也不会发布生命周期转换。该约定没有时间截止点或应答方分类。
+
+```ts ignore-check
+type UserQuestionDispatchRelease = () => void
+
+interface UserQuestionDispatchLifecycle {
+  readonly request: AskUserQuestionRequest
+  defer(release: UserQuestionDispatchRelease): void
+}
+```
+
 ## 错误
 
 `UserQuestionError` 继承 `HarnessError`，因此 `ctx.tools.execute()` 会保留 `{ name, code }`，用于面向模型的工具失败，如 `EMPTY_QUESTIONS`、`NO_PROVIDER`、`ASK_ABORTED` 或 UI 侧取消。
@@ -174,5 +187,29 @@ registerProvider(provider: UserQuestionProvider): () => void
 async ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>
 ```
 
-Source: [`packages/interaction/user-questions/src/index.ts:51`](../../packages/interaction/user-questions/src/index.ts)
+Source: [`packages/interaction/user-questions/src/index.ts:91`](../../packages/interaction/user-questions/src/index.ts)
+
+<a id="user-questions-events"></a>
+
+### `user-questions/*` events
+
+<a id="user-questionsprovider-dispatch--emit"></a>
+
+#### `user-questions/provider-dispatch` — emit
+
+A validated question request is about to reach its selected provider. Listeners may synchronously defer per-call cleanup. Listener failures are contained and cannot veto provider dispatch.
+
+```ts cordis-catalog
+/**
+ * A validated question request is about to reach its selected provider.
+ * Listeners may synchronously defer per-call cleanup. Listener failures are
+ * contained and cannot veto provider dispatch.
+ * @param lifecycle.request - exact request passed to the provider.
+ * @param lifecycle.defer - registers cleanup for provider settlement.
+ * @mode emit
+ */
+'user-questions/provider-dispatch'(lifecycle: UserQuestionDispatchLifecycle): void
+```
+
+Source: [`packages/interaction/user-questions/src/index.ts:78`](../../packages/interaction/user-questions/src/index.ts)
 <!-- END GENERATED cordis-surface -->

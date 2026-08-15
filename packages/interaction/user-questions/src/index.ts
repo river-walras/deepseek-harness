@@ -39,6 +39,46 @@ export interface UserQuestionProvider {
   ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>
 }
 
+/** Cleanup registered by one provider-dispatch lifecycle observer. */
+export type UserQuestionDispatchRelease = () => void
+
+/**
+ * Provider-neutral lifecycle notification emitted only when a validated
+ * request reaches the selected provider.
+ *
+ * `ASK_ABORTED`, `CALLER_NOT_LIVE`, `DELEGATED_CALLER`, `EMPTY_QUESTIONS`,
+ * `BAD_INTENT`, and `NO_PROVIDER` rejections before dispatch emit nothing and
+ * publish no lifecycle transition. Each deferred cleanup runs exactly once
+ * after the provider call settles, including rejection; cleanup failure cannot
+ * replace the provider outcome or starve later cleanup.
+ */
+export interface UserQuestionDispatchLifecycle {
+  /** Exact validated request passed to the selected provider. */
+  readonly request: AskUserQuestionRequest
+  /**
+   * Register one synchronous cleanup owned by this provider call. Registration
+   * after listener dispatch is rejected because the provider may already have
+   * settled.
+   * @param release - cleanup run exactly once after provider settlement; a
+   * failure is contained.
+   */
+  defer(release: UserQuestionDispatchRelease): void
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * A validated question request is about to reach its selected provider.
+     * Listeners may synchronously defer per-call cleanup. Listener failures are
+     * contained and cannot veto provider dispatch.
+     * @param lifecycle.request - exact request passed to the provider.
+     * @param lifecycle.defer - registers cleanup for provider settlement.
+     * @mode emit
+     */
+    'user-questions/provider-dispatch'(lifecycle: UserQuestionDispatchLifecycle): void
+  }
+}
+
 /** Stable error taxonomy for user-questions failures. */
 export class UserQuestionError extends HarnessError {
   constructor(message: string, code: string, options?: ErrorOptions) {
@@ -133,10 +173,55 @@ export class UserQuestionService extends Service {
           'BAD_INTENT')
       }
     }
-    if (this.provider === undefined) {
+    const provider = this.provider
+    if (provider === undefined) {
       throw new UserQuestionError('no user-questions provider is registered', 'NO_PROVIDER')
     }
-    return this.provider.ask(request)
+    const releases = this.emitProviderDispatch(request)
+    try {
+      return await provider.ask(request)
+    } finally {
+      this.releaseProviderDispatch(releases)
+    }
+  }
+
+  /** Emit the observe-only provider boundary with per-listener failure containment. */
+  private emitProviderDispatch(request: AskUserQuestionRequest): UserQuestionDispatchRelease[] {
+    const releases: UserQuestionDispatchRelease[] = []
+    let accepting = true
+    const lifecycle: UserQuestionDispatchLifecycle = {
+      request,
+      defer: (release) => {
+        if (!accepting) {
+          throw new Error('user-questions/provider-dispatch defer() must run synchronously during listener dispatch')
+        }
+        releases.push(release)
+      },
+    }
+    const args: unknown[] = ['user-questions/provider-dispatch', lifecycle]
+    for (const callback of this.ctx.events.dispatch('emit', args)) {
+      try {
+        const returned: unknown = callback(...args)
+        void Promise.resolve(returned).catch((error: unknown) => {
+          this.ctx.logger.warn(`user-questions/provider-dispatch listener rejected: ${String(error)}`)
+        })
+      } catch (error: unknown) {
+        this.ctx.logger.warn(`user-questions/provider-dispatch listener threw: ${String(error)}`)
+      }
+    }
+    accepting = false
+    return releases
+  }
+
+  /** Run every accepted cleanup once without changing the selected provider's outcome. */
+  private releaseProviderDispatch(releases: UserQuestionDispatchRelease[]): void {
+    for (const release of releases.splice(0)) {
+      try {
+        release()
+      } catch (error: unknown) {
+        this.ctx.logger.warn(`user-questions/provider-dispatch cleanup threw: ${String(error)}`)
+      }
+    }
   }
 }
 

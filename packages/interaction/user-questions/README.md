@@ -18,11 +18,14 @@ User-interaction Service Definition. It owns `ctx.userQuestions`, the service a 
 - `AskUserQuestionIntent` — `{ kind: 'plan-review', approve }`; the tagged presentation intent below.
 - `AskUserQuestionAnswer` — `{ answers: [{ id, selected, custom? }] }`.
 - `UserQuestionProvider` — UI implementation with `ask(request)`.
+- `UserQuestionDispatchLifecycle` — provider-neutral event payload that lets observers defer cleanup around one selected-provider call.
 - `UserQuestionError` — `HarnessError` subclass with codes such as `EMPTY_QUESTIONS`, `BAD_INTENT`, `NO_PROVIDER`, `DUPLICATE_PROVIDER`, `ASK_ABORTED`, `CALLER_NOT_LIVE`, and `DELEGATED_CALLER`.
 
 For a single-select question, `custom` overrides the selected choice and `selected` is empty. For a multi-select question, `custom` may supplement the labels in `selected`. A UI may preserve a skipped item as `{ id, selected: [] }`, keeping the existing answer shape while retaining other answers in the batch.
 
 When a request carries an agent, `ask()` authenticates its exact identity through the live `AgentRegistry` and admits only a runtime root. Durable lineage is not authority: a session with historical delegation depth may ask after it is resumed as a new runtime root, while a live child owned by another agent is rejected even if its durable depth is zero. Agentless programmatic requests retain the existing provider path.
+
+The `user-questions/provider-dispatch` lifecycle event runs only after request validation and provider selection, immediately before `provider.ask()`. `ASK_ABORTED`, `CALLER_NOT_LIVE`, `DELEGATED_CALLER`, `EMPTY_QUESTIONS`, `BAD_INTENT`, and `NO_PROVIDER` failures before dispatch emit nothing. Listeners register cleanup synchronously during dispatch. Listener and cleanup failures are contained: they cannot veto dispatch, replace the provider outcome, or starve later cleanup. Each accepted cleanup runs exactly once after the provider call settles. The contract has no answerer-speed cutoff.
 
 ### Presentation intent
 

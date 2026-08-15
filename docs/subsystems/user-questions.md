@@ -119,6 +119,19 @@ interface UserQuestionProvider {
 }
 ```
 
+## Provider-dispatch lifecycle
+
+`user-questions/provider-dispatch` observes only requests that finish validation and provider selection. The event runs immediately before `provider.ask()` and lets listeners defer per-call cleanup, which runs exactly once after that call settles. Listener failures are contained and cannot veto dispatch. Pre-dispatch `ASK_ABORTED`, `CALLER_NOT_LIVE`, `DELEGATED_CALLER`, `EMPTY_QUESTIONS`, `BAD_INTENT`, and `NO_PROVIDER` failures emit nothing and publish no lifecycle transition. There is no timing cutoff or answerer classification.
+
+```ts ignore-check
+type UserQuestionDispatchRelease = () => void
+
+interface UserQuestionDispatchLifecycle {
+  readonly request: AskUserQuestionRequest
+  defer(release: UserQuestionDispatchRelease): void
+}
+```
+
 ## Errors
 
 `UserQuestionError` extends `HarnessError`, so `ctx.tools.execute()` preserves `{ name, code }` for model-facing tool failures such as `EMPTY_QUESTIONS`, `NO_PROVIDER`, `ASK_ABORTED`, or UI-side cancellation.
@@ -174,5 +187,29 @@ registerProvider(provider: UserQuestionProvider): () => void
 async ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>
 ```
 
-Source: [`packages/interaction/user-questions/src/index.ts:51`](../../packages/interaction/user-questions/src/index.ts)
+Source: [`packages/interaction/user-questions/src/index.ts:91`](../../packages/interaction/user-questions/src/index.ts)
+
+<a id="user-questions-events"></a>
+
+### `user-questions/*` events
+
+<a id="user-questionsprovider-dispatch--emit"></a>
+
+#### `user-questions/provider-dispatch` — emit
+
+A validated question request is about to reach its selected provider. Listeners may synchronously defer per-call cleanup. Listener failures are contained and cannot veto provider dispatch.
+
+```ts cordis-catalog
+/**
+ * A validated question request is about to reach its selected provider.
+ * Listeners may synchronously defer per-call cleanup. Listener failures are
+ * contained and cannot veto provider dispatch.
+ * @param lifecycle.request - exact request passed to the provider.
+ * @param lifecycle.defer - registers cleanup for provider settlement.
+ * @mode emit
+ */
+'user-questions/provider-dispatch'(lifecycle: UserQuestionDispatchLifecycle): void
+```
+
+Source: [`packages/interaction/user-questions/src/index.ts:78`](../../packages/interaction/user-questions/src/index.ts)
 <!-- END GENERATED cordis-surface -->

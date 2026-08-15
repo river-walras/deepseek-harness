@@ -63,6 +63,18 @@ import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
 import * as ToolWorkflow from '@deepseek-ai/dsh-tool-workflow'
+import * as ToolPeer from '@deepseek-ai/dsh-tool-peer'
+import PeerGroupRegistry from '@deepseek-ai/dsh-peer-group'
+import type {
+  PeerGroupView,
+  PeerMemberView,
+  PeerSendRequest,
+  PeerSendResult,
+  PeerWaitObservation,
+  PeerWaitOptions,
+  PeerWaitRequest,
+  PeerWaitSpec,
+} from '@deepseek-ai/dsh-peer-group'
 import { githubSlug } from './verify-md-links.ts'
 
 /** Attachment seam marker that makes the attachments-conditional `read_image` schema harvestable. */
@@ -85,6 +97,49 @@ class CatalogAttachmentStore extends AttachmentStore {
 
   override readImage(_ref: ImageAttachmentRef): Promise<StoredImageAttachment> {
     return Promise.reject(new Error('gen-tool-catalog: attachment reads are unreachable during schema harvest'))
+  }
+}
+
+/** Schema-harvest peer service; catalog generation never executes a peer operation. */
+class CatalogPeerGroupRegistry extends PeerGroupRegistry {
+  override resolveWait(_options?: PeerWaitOptions): PeerWaitSpec {
+    return { until: ['idle'], timeoutMs: 1 }
+  }
+
+  override create(_caller: Agent, _name: string): Promise<PeerGroupView> {
+    return Promise.reject(new Error('tool-catalog peer creation is unreachable'))
+  }
+
+  override add(
+    _caller: Agent,
+    _groupId: Parameters<PeerGroupRegistry['add']>[1],
+    _sessionId: SessionId,
+  ): Promise<PeerMemberView> {
+    return Promise.reject(new Error('tool-catalog peer admission is unreachable'))
+  }
+
+  override remove(
+    _caller: Agent,
+    _groupId: Parameters<PeerGroupRegistry['remove']>[1],
+    _sessionId: SessionId,
+  ): Promise<void> {
+    return Promise.reject(new Error('tool-catalog peer removal is unreachable'))
+  }
+
+  override dissolve(_caller: Agent, _groupId: Parameters<PeerGroupRegistry['dissolve']>[1]): Promise<void> {
+    return Promise.reject(new Error('tool-catalog peer dissolution is unreachable'))
+  }
+
+  override list(_caller: Agent, _groupId?: Parameters<PeerGroupRegistry['list']>[1]): readonly PeerGroupView[] {
+    return []
+  }
+
+  override send(_request: PeerSendRequest): Promise<PeerSendResult> {
+    return Promise.reject(new Error('tool-catalog peer delivery is unreachable'))
+  }
+
+  override wait(_request: PeerWaitRequest): Promise<PeerWaitObservation> {
+    return Promise.reject(new Error('tool-catalog peer waiting is unreachable'))
   }
 }
 
@@ -177,9 +232,9 @@ export interface ToolPackage {
 }
 
 /**
- * The boot manifest: every shipped tool package (a `tool-*` leaf under
+ * The boot manifest: every implemented tool package (a `tool-*` leaf under
  * `packages/`). Ordered by package name (the render order); the completeness
- * guard proves it is exhaustive against the on-disk glob.
+ * guard proves it exhausts the on-disk glob.
  */
 const TOOL_PACKAGES: ToolPackage[] = [
   {
@@ -391,6 +446,19 @@ const TOOL_PACKAGES: ToolPackage[] = [
       'The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema.',
   },
   {
+    pkg: '@deepseek-ai/dsh-tool-peer',
+    dir: 'tool-peer',
+    source: 'packages/peer-group/tool-peer/src/index.ts',
+    requires: ['ctx.tools', 'ctx.peerGroups', 'a calling root Agent with peer membership'],
+    writes: ['tool/call', 'peer message delivery through the target inbox', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(CatalogPeerGroupRegistry)
+      await ctx.plugin(ToolPeer)
+    },
+    note:
+      'send_to_peer defaults to delivery acceptance without waiting; its optional wait follows that exact message turn. wait_for_peer observes state independently, and list_peers exposes only current shared memberships.',
+  },
+  {
     pkg: '@deepseek-ai/dsh-tool-ralph',
     dir: 'tool-ralph',
     source: 'packages/workflow/tool-ralph/src/index.ts',
@@ -569,8 +637,8 @@ interface CatalogPackage {
 export type ToolCatalog = CatalogPackage[]
 
 /**
- * Assert the boot manifest covers every shipped tool package on disk (a
- * `tool-*` leaf under `packages/`).
+ * Assert the boot manifest covers every tool package on disk (a `tool-*` leaf
+ * under `packages/`).
  * Booting has no source declaration to enumerate, so this glob restores the
  * "a new tool cannot be silently undocumented" guarantee: an unlisted package
  * fails the generator (and the freshness gate) until it is added to
@@ -585,7 +653,7 @@ export function assertManifestComplete(packages: ToolPackage[] = TOOL_PACKAGES, 
   if (missing.length > 0) {
     throw new Error(
       `gen-tool-catalog: ${missing.length} tool package(s) not in the boot manifest: ${missing.join(', ')}. `
-      + 'Add each to TOOL_PACKAGES in scripts/gen-tool-catalog.ts so its schema is catalogued.',
+      + 'Add each to TOOL_PACKAGES so its schema is catalogued.',
     )
   }
 }
@@ -691,7 +759,7 @@ export function render(catalog: ToolCatalog): string {
     '',
     'Every model-facing tool a shipped plugin contributes to `ctx.tools`: the `name`, `description`, and JSON-Schema `parameters` the model receives via the system-prompt assembly. It complements the [subsystem pages](subsystems/core.md) (the types plus each page\'s generated Cordis API region) — this page is the *tools* the agent is offered.',
     '',
-    'This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is missing from the generator\'s boot manifest, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).',
+    'This file is GENERATED and verified fresh by `pnpm run verify-tool-catalog` (part of `doc-sync`) — do not edit it by hand. Unlike the cordis catalog (a pure source-AST pass), this generator BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`, because a tool schema is not statically knowable (runtime-spread enums, concatenated descriptions, config-driven names, raw-JSON-Schema MCP tools). A completeness guard globs `packages/*/tool-*` and fails if any package is absent from either the generator\'s boot manifest or its narrow declaration-only exception set, so a new tool cannot be silently undocumented. See [the tool-schema-catalog Agent Note](../.agents/notes/implemented/process/2026-07-02-tool-schema-catalog.md).',
     '',
     'Scope: shipped product tools under `packages/*/tool-*`, each booted with its DEFAULT config, except where a Config field is REQUIRED with no default — there the generator must choose, and the per-package note records which branch this page shows. The registered tool NAME can be a load-time config (e.g. `tool-subagent`\'s `toolName`), so a deployment may expose a package under a different or additional name — a per-package note records those shipped aliases where they exist. The `examples/` demo tools (e.g. `echo`) are excluded, matching the cordis catalog\'s packages-only scope.',
     '',

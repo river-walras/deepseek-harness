@@ -220,3 +220,104 @@ describe('UserQuestionService', () => {
     expect(p.seen[0]?.questions[1]?.intent).toEqual(intent)
   })
 })
+
+describe('user-questions/provider-dispatch', () => {
+  it('emits nothing for every pre-dispatch rejection', async () => {
+    const ctx = new Context()
+    await ctx.plugin(AgentRegistry)
+    await ctx.plugin(UserQuestionService)
+    const dispatched = vi.fn()
+    ctx.on('user-questions/provider-dispatch', dispatched)
+
+    await expect(ctx.userQuestions.ask({
+      questions: [{ id: 'confirm', question: 'Proceed?' }],
+    })).rejects.toMatchObject({ code: 'NO_PROVIDER' })
+
+    const p = { ask: vi.fn(async () => ({ answers: [] })) }
+    ctx.userQuestions.registerProvider(p)
+    const aborted = new AbortController()
+    aborted.abort()
+    await expect(ctx.userQuestions.ask({
+      questions: [{ id: 'confirm', question: 'Proceed?' }],
+      signal: aborted.signal,
+    })).rejects.toMatchObject({ code: 'ASK_ABORTED' })
+    await expect(ctx.userQuestions.ask({ questions: [] }))
+      .rejects.toMatchObject({ code: 'EMPTY_QUESTIONS' })
+    await expect(ctx.userQuestions.ask({
+      questions: [{ id: 'confirm', question: 'Proceed?' }],
+      agent: stubAgent('not-live'),
+    })).rejects.toMatchObject({ code: 'CALLER_NOT_LIVE' })
+
+    const root = stubAgent('dispatch-root')
+    const child = stubAgent('dispatch-child')
+    ctx.agents.enter(root, undefined)
+    ctx.agents.enter(child, root)
+    await expect(ctx.userQuestions.ask({
+      questions: [{ id: 'confirm', question: 'Proceed?' }],
+      agent: child,
+    })).rejects.toMatchObject({ code: 'DELEGATED_CALLER' })
+    await expect(ctx.userQuestions.ask({
+      questions: [{
+        id: 'plan',
+        question: 'Approve?',
+        detail: '# Plan',
+        options: [{ label: 'Approve' }],
+        intent: { kind: 'plan-review', approve: 'Missing' },
+      }],
+    })).rejects.toMatchObject({ code: 'BAD_INTENT' })
+
+    expect(dispatched).not.toHaveBeenCalled()
+    expect(p.ask).not.toHaveBeenCalled()
+  })
+
+  it('brackets an asynchronous provider call and emits for an agentless request', async () => {
+    const ctx = new Context()
+    await ctx.plugin(UserQuestionService)
+    const pending = Promise.withResolvers<{ answers: { id: string; selected: string[] }[] }>()
+    const order: string[] = []
+    ctx.on('user-questions/provider-dispatch', (lifecycle) => {
+      order.push(`dispatch:${lifecycle.request.questions[0]?.id}`)
+      lifecycle.defer(() => { order.push('cleanup') })
+    })
+    ctx.userQuestions.registerProvider({
+      ask: () => {
+        order.push('provider')
+        return pending.promise
+      },
+    })
+
+    const asked = ctx.userQuestions.ask({ questions: [{ id: 'confirm', question: 'Proceed?' }] })
+    expect(order).toEqual(['dispatch:confirm', 'provider'])
+    pending.resolve({ answers: [{ id: 'confirm', selected: ['yes'] }] })
+
+    await expect(asked).resolves.toEqual({ answers: [{ id: 'confirm', selected: ['yes'] }] })
+    expect(order).toEqual(['dispatch:confirm', 'provider', 'cleanup'])
+  })
+
+  it('contains listener and cleanup failures without replacing provider rejection', async () => {
+    const ctx = new Context()
+    await ctx.plugin(UserQuestionService)
+    const warned = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
+    const later: string[] = []
+    ctx.on('user-questions/provider-dispatch', () => { throw new Error('listener threw') })
+    ctx.on('user-questions/provider-dispatch', () => Promise.reject(new Error('listener rejected')) as never)
+    ctx.on('user-questions/provider-dispatch', (lifecycle) => {
+      lifecycle.defer(() => { throw new Error('cleanup threw') })
+      lifecycle.defer(() => { later.push('cleanup') })
+      later.push('listener')
+    })
+    ctx.userQuestions.registerProvider({ ask: async () => { throw new Error('provider rejected') } })
+
+    await expect(ctx.userQuestions.ask({
+      questions: [{ id: 'confirm', question: 'Proceed?' }],
+    })).rejects.toThrow('provider rejected')
+    await Promise.resolve()
+
+    expect(later).toEqual(['listener', 'cleanup'])
+    expect(warned.mock.calls.map(([message]) => String(message))).toEqual(expect.arrayContaining([
+      expect.stringContaining('listener threw'),
+      expect.stringContaining('listener rejected'),
+      expect.stringContaining('cleanup threw'),
+    ]))
+  })
+})

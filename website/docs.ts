@@ -294,11 +294,13 @@ const subsystemGroups = [
   ]],
   ['策略与交互', 'Policy and interaction', [
     ['approval.md', '审批', 'Approvals'],
+    ['agent-wait.md', 'Agent 等待', 'Agent waits'],
     ['permission-presets.md', '权限预设', 'Permission presets'],
     ['sandbox.md', '沙箱', 'Sandboxing'],
     ['plan.md', '计划模式', 'Plan mode'],
     ['user-questions.md', '用户交互', 'User interaction'],
     ['commands.md', '命令', 'Human commands'],
+    ['peer-groups.md', '同级 Agent 组', 'Peer groups'],
     ['goal.md', '目标', 'Goals'],
     ['schedule.md', '定时提醒', 'Scheduled reminders'],
   ]],

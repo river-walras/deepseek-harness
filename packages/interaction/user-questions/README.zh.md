@@ -18,11 +18,14 @@
 - `AskUserQuestionIntent`：`{ kind: 'plan-review', approve }`；即下文的带标签呈现意图。
 - `AskUserQuestionAnswer`：`{ answers: [{ id, selected, custom? }] }`。
 - `UserQuestionProvider`：包含 `ask(request)` 的 UI 实现。
+- `UserQuestionDispatchLifecycle`：提供方无关的事件载荷，让观察者延后清理以包围一次已选定提供方调用。
 - `UserQuestionError`：`HarnessError` 的子类，包含 `EMPTY_QUESTIONS`、`BAD_INTENT`、`NO_PROVIDER`、`DUPLICATE_PROVIDER`、`ASK_ABORTED`、`CALLER_NOT_LIVE` 和 `DELEGATED_CALLER` 等代码。
 
 对于单选题，`custom` 会覆盖选中的选项，且 `selected` 为空。对于多选题，`custom` 可以补充 `selected` 中的标签。UI 可以把跳过的条目保留为 `{ id, selected: [] }`，既维持现有回答形态，也保留该批次中的其他回答。
 
 请求包含 agent 时，`ask()` 会通过当前 `AgentRegistry` 验证该 agent 与注册表中的存活实例是同一对象，并且只允许运行时根调用。持久谱系不构成权限依据：带有历史委托深度的会话恢复为新的运行时根后可以提问；归属于另一个 agent 的存活子级即使持久化记录的委托深度为零也会被拒绝。不含 agent 的程序化请求继续沿用现有提供方路径。
+
+`user-questions/provider-dispatch` 生命周期事件只会在请求验证和提供方选择完成后、`provider.ask()` 之前运行。派发前的 `ASK_ABORTED`、`CALLER_NOT_LIVE`、`DELEGATED_CALLER`、`EMPTY_QUESTIONS`、`BAD_INTENT` 和 `NO_PROVIDER` 失败不会发出事件。监听器会在派发期间同步注册清理函数。监听器和清理函数的失败都会被隔离：它们无法否决派发、替换提供方结果或阻止后续清理。每个已接受的清理函数会在提供方调用结算后恰好运行一次。该约定没有按应答方速度划分的截止点。
 
 ### 呈现意图
 

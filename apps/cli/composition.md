@@ -30,6 +30,16 @@ flowchart LR
   cfg --> plugin_dsh_base_user_questions
   plugin_dsh_base_agent["agent<br/>@deepseek-ai/dsh-agent"]
   cfg --> plugin_dsh_base_agent
+  plugin_dsh_base_agent_wait_local["agent-wait-local<br/>@deepseek-ai/dsh-agent-wait-local"]
+  cfg --> plugin_dsh_base_agent_wait_local
+  plugin_dsh_base_agent_wait_interaction["agent-wait-interaction<br/>@deepseek-ai/dsh-agent-wait-interaction"]
+  cfg --> plugin_dsh_base_agent_wait_interaction
+  plugin_dsh_base_peer_group_local["peer-group-local<br/>@deepseek-ai/dsh-peer-group-local"]
+  cfg --> plugin_dsh_base_peer_group_local
+  plugin_dsh_base_command_peer["command-peer<br/>@deepseek-ai/dsh-command-peer"]
+  cfg --> plugin_dsh_base_command_peer
+  plugin_dsh_base_tool_peer["tool-peer<br/>@deepseek-ai/dsh-tool-peer"]
+  cfg --> plugin_dsh_base_tool_peer
   plugin_dsh_base_agent_default_model["agent-default-model<br/>@deepseek-ai/dsh-agent-default-model"]
   cfg --> plugin_dsh_base_agent_default_model
   plugin_dsh_base_jobs["jobs<br/>@deepseek-ai/dsh-jobs-local"]
@@ -179,6 +189,11 @@ flowchart LR
 | `session-title-llm` | `@deepseek-ai/dsh-session-title-first-prompt-llm` |
 | `user-questions` | `@deepseek-ai/dsh-user-questions` |
 | `agent` | `@deepseek-ai/dsh-agent` |
+| `agent-wait-local` | `@deepseek-ai/dsh-agent-wait-local` |
+| `agent-wait-interaction` | `@deepseek-ai/dsh-agent-wait-interaction` |
+| `peer-group-local` | `@deepseek-ai/dsh-peer-group-local` |
+| `command-peer` | `@deepseek-ai/dsh-command-peer` |
+| `tool-peer` | `@deepseek-ai/dsh-tool-peer` |
 | `agent-default-model` | `@deepseek-ai/dsh-agent-default-model` |
 | `jobs` | `@deepseek-ai/dsh-jobs-local` |
 | `llm-retry` | `@deepseek-ai/dsh-llm-retry` |
