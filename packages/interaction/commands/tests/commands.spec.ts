@@ -21,6 +21,11 @@ async function mount(): Promise<Context> {
   return ctx
 }
 
+/** Create a rejection with an untyped plugin value. */
+async function rejectUnknown(value: unknown): Promise<never> {
+  throw value
+}
+
 /** Mint a scope whose key is a live agent (real session: the executor logs lifecycle events on it). */
 async function mintAgentScope(ctx: Context, name: string): Promise<{ scope: Scope; agent: Agent }> {
   const session = ctx.sessions.create(SessionId(name))
@@ -136,8 +141,8 @@ describe('CommandRuntime', () => {
 
     const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => undefined)
     ctx.on('commands/change', () => { throw new Error('observer threw') })
-    // oxlint-disable-next-line typescript/no-misused-promises -- exercises rejected-listener containment
-    ctx.on('commands/change', () => Promise.reject(new Error('observer rejected')))
+    const rejectedObserver = (): void => Promise.reject(new Error('observer rejected')) as unknown as undefined
+    ctx.on('commands/change', rejectedObserver)
     const afterFailures = vi.fn()
     ctx.on('commands/change', afterFailures)
     const removeContained = ctx.commands.register(command('contained'))
@@ -229,8 +234,7 @@ describe('CommandRuntime', () => {
     ctx.commands.register({
       name: 'reject-value',
       description: 'Reject a non-Error value',
-      // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- exercise untyped plugin normalization
-      handler: () => Promise.reject('not an Error'),
+      handler: () => rejectUnknown('not an Error'),
     })
     await expect(ctx.commands.execute(agent, '/reject-value', new AbortController().signal))
       .rejects.toThrow('command handler rejected with a non-Error value: not an Error')
@@ -239,8 +243,7 @@ describe('CommandRuntime', () => {
     ctx.commands.register({
       name: 'reject-hostile',
       description: 'Reject an unrenderable value',
-      // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- exercise hostile plugin normalization
-      handler: () => Promise.reject(hostile),
+      handler: () => rejectUnknown(hostile),
     })
     await expect(ctx.commands.execute(agent, '/reject-hostile', new AbortController().signal))
       .rejects.toMatchObject({

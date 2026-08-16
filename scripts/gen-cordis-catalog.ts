@@ -325,6 +325,7 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   CommandDescriptor: 'commands.md',
   CommandId: 'commands.md',
   CommandResult: 'commands.md',
+  CommandSource: 'commands.md',
   CommandSurface: 'commands.md',
   LspProvider: 'lsp.md',
   LspQueryRequest: 'lsp.md',

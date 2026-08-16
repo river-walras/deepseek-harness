@@ -16,13 +16,13 @@ The projection reports the current session title and its source, workspace label
 
 `send()` revalidates the exact caller as a live root, resolves the peer once, and checks the target's current Agent generation immediately before execution or `Agent.followup()`. It rejects an outstanding human interaction, but a target blocked only on a peer wait remains addressable.
 
-The provider synchronously parses each line before ordinary delivery. A slash line that names a command composed for the target Agent runs through that root's command plane and creates no inbox message; all other text uses `Agent.followup()`. With `dispatchableCommands` omitted, any live root can run any command composed in any other live root, including `/permission` and `/compact`, matching a human typing into that session. Deployments can set `dispatchableCommands` to command names without slashes to narrow this authority. `command/run` records the sending session with `source.kind = 'peer'`.
+The provider synchronously parses each line before ordinary delivery. A slash line that names a command composed for the target Agent is dispatched through that root's command plane and creates no inbox message; all other text uses `Agent.followup()`. Dispatch returns immediately without awaiting handler settlement, and a later rejection is logged and swallowed. With `dispatchableCommands` omitted, any live root can start any command composed in any other live root, including `/permission` and `/compact`, matching a human typing into that session. Deployments can set `dispatchableCommands` to command names without slashes to narrow this authority. `command/run` records the sending session with `source.kind = 'peer'`.
 
 A shared writable workspace is advisory. When two roots both hold write authority over one provider-resolved canonical workspace, the listing row and the delivery acceptance carry `sharesWritableWorkspace`; delivery still proceeds. Both classifications read current sandbox and approval state, so a human policy change takes effect on the next call without mutating peer state or appending a lifecycle event.
 
 Archived sessions are excluded from discovery and refused as addresses. Archiving hides a sidebar row without disposing the Agent, so the registry alone would still expose it as a peer and let a delivery wake work the human cannot see.
 
-Accepted message delivery mints `MessageId` and `PeerDeliveryId` values and records the sender session plus delivery id in the target message source. These attribution fields do not grant authority. A command result instead identifies the command name, success state, optional handler text, and target session.
+Accepted message delivery mints `MessageId` and `PeerDeliveryId` values and records the sender session plus delivery id in the target message source. These attribution fields do not grant authority. An accepted command dispatch instead identifies only the command name and target session; its outcome remains in the target transcript.
 
 ## Waits
 
@@ -64,9 +64,9 @@ abstract resolveWait(options?: PeerWaitOptions): PeerWaitSpec
 abstract list(caller: Agent): readonly PeerView[]
 
 /**
- * Resolve one peer once, authorize, and either run its recognized command or enqueue a follow-up.
+ * Resolve one peer once, authorize, and either dispatch its recognized command or enqueue a follow-up.
  * @param request - caller, peer address, line, optional resolved wait, and cancellation.
- * @returns the command outcome or durable message acceptance, plus any requested observation.
+ * @returns command dispatch or durable message acceptance, plus any requested observation.
  */
 abstract send(request: PeerSendRequest): Promise<PeerSendResult>
 

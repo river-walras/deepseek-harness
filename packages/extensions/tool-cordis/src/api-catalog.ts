@@ -962,9 +962,9 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: 'abstract send(request: PeerSendRequest): Promise<PeerSendResult>',
-        description: 'Resolve one peer once, authorize, and either run its recognized command or enqueue a follow-up.',
+        description: 'Resolve one peer once, authorize, and either dispatch its recognized command or enqueue a follow-up.',
         parameters: [{ name: 'request', description: 'caller, peer address, line, optional resolved wait, and cancellation.' }],
-        returns: 'the command outcome or durable message acceptance, plus any requested observation.',
+        returns: 'command dispatch or durable message acceptance, plus any requested observation.',
       },
       {
         signature: 'abstract wait(request: PeerWaitRequest): Promise<PeerWaitObservation>',
@@ -3611,7 +3611,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'PeerCommandExecution',
-    declaration: 'export interface PeerCommandExecution {\n    readonly peerSessionId: SessionId;\n    readonly name: string;\n    readonly ok: boolean;\n    readonly text?: string;\n}',
+    declaration: 'export interface PeerCommandExecution {\n    readonly peerSessionId: SessionId;\n    readonly name: string;\n}',
   },
   {
     name: 'PeerDeliveryAcceptance',

@@ -14,7 +14,7 @@ Service Definition for `ctx.peers`, the registry for zero-configuration collabor
 
 An ordinary line uses `Agent.followup()` and returns durable acceptance ids, never a reply. The target message records the sender session and delivery id as attribution, not authority.
 
-A slash line that resolves to a command composed for the target Agent runs in that root's command plane instead of entering its inbox. Any live root can therefore run any command composed in any other live root, including `/permission` and `/compact`, matching what a human typing into that session can do. The command lifecycle records the sender session through `CommandSource.kind = 'peer'`. Providers may narrow this authority with `dispatchableCommands`.
+A slash line that resolves to a command composed for the target Agent is dispatched in that root's command plane instead of entering its inbox. Any live root can therefore start any command composed in any other live root, including `/permission` and `/compact`, matching what a human typing into that session can do. Dispatch returns the target session and command name immediately, without the handler outcome; the target transcript records that outcome, and a rejected execution is logged locally. The command lifecycle records the sender session through `CommandSource.kind = 'peer'`. Providers may narrow this authority with `dispatchableCommands`.
 
 Standalone waits may match the initial state. A message send wait follows the exact delivered `MessageId`, its `agent/inbox/claimed` turn, and that turn's later state; a command send wait observes state without a message or turn correlation. Each wait resolves its target once, pins the Agent generation, installs a process-wide cycle-checked edge, and cleans up on every completion or failure.
 
@@ -28,7 +28,7 @@ See the [peer subsystem reference](../../../docs/subsystems/peers.md) and propos
 
 #### What the model sees
 
-The model sees this service only through `@deepseek-ai/dsh-tool-peer`: listing returns live-root projections, sending returns either message acceptance or a command outcome, and waits return matching state or stable errors.
+The model sees this service only through `@deepseek-ai/dsh-tool-peer`: listing returns live-root projections, sending returns either message acceptance or command dispatch acceptance, and waits return matching state or stable errors.
 
 #### Token effect
 

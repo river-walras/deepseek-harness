@@ -425,13 +425,13 @@ const TOOL_PACKAGES: ToolPackage[] = [
     dir: 'tool-peer',
     source: 'packages/peer/tool-peer/src/index.ts',
     requires: ['ctx.tools', 'ctx.peers', 'a calling live root Agent'],
-    writes: ['tool/call', 'peer message delivery through the target inbox', 'tool/result'],
+    writes: ['tool/call', 'peer message delivery or target command/run and later command/done', 'tool/result'],
     async mount(ctx) {
       await ctx.plugin(CatalogPeerRegistry)
       await ctx.plugin(ToolPeer)
     },
     note:
-      'send_to_peer defaults to delivery acceptance without waiting; its optional wait follows that exact message turn. wait_for_peer observes state independently, and list_peers discovers every other live root with no setup.',
+      'send_to_peer delivers ordinary text but dispatches a recognized slash line in the target command plane and returns without its outcome; its optional wait follows the message turn or observes peer state after command dispatch. wait_for_peer observes state independently, and list_peers discovers every other live root with no setup.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-ralph',

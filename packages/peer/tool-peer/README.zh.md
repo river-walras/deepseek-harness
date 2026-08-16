@@ -6,7 +6,7 @@
 
 ## 工具约定
 
-- `send_to_peer({ peer, message, wait? })` 通过会话 id 或唯一用户设置标题寻址活动根。普通文本返回 `{ accepted, deliveryId, messageId, peer, wait? }`，绝不返回回复。已识别的斜杠文本改为在目标命令平面运行，并返回 `{ accepted, ranAsCommand, commandOk, commandText?, peer, wait? }`，不投递消息。因此任一实时根都能在其他任一实时根中运行该根组装的任意命令，包括 `/permission` 和 `/compact`；`peer-local.dispatchableCommands` 可以收窄可用名称。消息等待跟随精确的已认领轮次，命令等待则观察状态且不带轮次。
+- `send_to_peer({ peer, message, wait? })` 通过会话 id 或唯一用户设置标题寻址活动根。普通文本返回 `{ accepted, deliveryId, messageId, peer, wait? }`，绝不返回回复。已识别的斜杠文本改为分派到目标命令平面，并返回 `{ accepted, ranAsCommand, peer, wait? }`，既不投递消息，也不等待处理器结果。该结果应从目标 transcript 读取；`wait` 只观察同级状态。因此任一实时根都能在其他任一实时根中启动该根组装的任意命令，包括 `/permission` 和 `/compact`；`peer-local.dispatchableCommands` 可以收窄可用名称。消息等待跟随精确的已认领轮次，命令等待则观察状态且不带轮次。
 - `wait_for_peer({ peer, until?, timeoutMs? })` 观察一个已解析根，可以匹配其初始状态，并将 `until` 默认为 `idle | blocked`。阻塞结果报告 `interaction` 或 `peer`。
 - `list_peers({})` 无需事先配置即可发现其他所有活动根，已归档会话除外。每行包含会话 id、可选标题及来源、可选工作区和 preset 标签、执行状态、写入权限，以及在该同级与调用方会因编辑同一目录而冲突时出现的 `sharesWritableWorkspace`。只有用户来源标题可作为地址。
 

@@ -206,7 +206,7 @@ export class LocalPeerRegistry extends PeerRegistry {
       throw new PeerError('peer delivery was aborted before acceptance', 'WAIT_ABORTED')
     }
     // Decided synchronously so ordinary text keeps reaching the target inbox
-    // in this same tick; only a real command crosses an await.
+    // in this same tick and command admission stays synchronous.
     const dispatch = this.commandDispatch(request, target)
     if (dispatch !== undefined) return this.runCommand(request, target, dispatch)
     const deliveryId = PeerDeliveryId(randomUUID())
@@ -272,7 +272,7 @@ export class LocalPeerRegistry extends PeerRegistry {
     return commands.find(target.agent, parsed.name) === undefined ? undefined : { commands, name: parsed.name }
   }
 
-  /** Run an already-recognized command line in the target's command plane. */
+  /** Dispatch an already-recognized command line in the target's command plane. */
   private async runCommand(
     request: PeerSendRequest,
     target: ResolvedPeer,
@@ -281,15 +281,13 @@ export class LocalPeerRegistry extends PeerRegistry {
     this.authorizeDelivery(request.caller, target)
     const signal = request.signal ?? new AbortController().signal
     const source = { kind: 'peer' as const, senderSessionId: request.caller.id }
-    const executed = await recognized.commands.execute(target.agent, request.message, signal, source)
-    if (executed === undefined) {
-      throw new PeerError('peer command vanished before execution', 'SUBSCRIPTION_FAILED')
-    }
+    void recognized.commands.execute(target.agent, request.message, signal, source)
+      .catch((error: unknown) => {
+        this.ctx.logger.warn(`peer command execution rejected after dispatch: ${String(error)}`)
+      })
     const command: PeerCommandExecution = {
       peerSessionId: target.sessionId,
       name: recognized.name,
-      ok: executed.result.kind === 'success',
-      ...executed.result.text === undefined ? {} : { text: executed.result.text },
     }
     if (request.wait === undefined) return { kind: 'command', command }
     const settled = await this.runWait({

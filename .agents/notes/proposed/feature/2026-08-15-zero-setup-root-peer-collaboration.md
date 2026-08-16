@@ -18,7 +18,7 @@ Replace `ctx.peerGroups` with `ctx.peers`. Every live root in the process will b
 
 `send_to_peer` will revalidate both exact live roots immediately before its side effect. Two write-capable roots sharing the provider's opaque canonical workspace identity will receive `sharesWritableWorkspace` as an advisory fact on listings and message acceptance; delivery will proceed because same-workspace collaboration is an ordinary use. Current human sandbox and approval policy will govern the classification without a policy listener or durable membership event.
 
-The provider will synchronously parse each line before ordinary delivery. A slash line that names a command composed for the target Agent will run in that root's command plane and create no inbox message. Omitted `dispatchableCommands` will expose every composed command, so any live root can run any command in any other live root, including `/permission` and `/compact`, matching what a human typing into that session can do. A deployment can set `dispatchableCommands` to command names without slashes to narrow this authority. `command/run` will attribute execution to the sending Session with `source.kind = 'peer'`; an unrecognized or excluded slash line will remain ordinary message text.
+The provider will synchronously parse each line before ordinary delivery. A slash line that names a command composed for the target Agent will be dispatched in that root's command plane and create no inbox message. Dispatch will return the target Session and command name immediately without awaiting the handler outcome; a rejected execution will be logged and swallowed. Omitted `dispatchableCommands` will expose every composed command, so any live root can start any command in any other live root, including `/permission` and `/compact`, matching what a human typing into that session can do. A deployment can set `dispatchableCommands` to command names without slashes to narrow this authority. `command/run` will attribute execution to the sending Session with `source.kind = 'peer'`; an unrecognized or excluded slash line will remain ordinary message text.
 
 Waits will retain the Agent-wait cursor protocol and bounded configuration. Each wait will pin the resolved target Agent object and install a process-wide cycle-checked edge. A later title rename will not retarget the wait; target replacement, either Agent's disposal, abort, timeout, subscription failure, and provider disposal will settle and clean it up.
 
@@ -36,13 +36,15 @@ Peer delivery will remain an ordinary attributed `Agent.followup()` message. The
 
 **Deliver every slash line as ordinary text.** Rejected because peer roots would be unable to reach direct session controls available to the human. Target-scoped command lookup preserves the target's composed command set, and `dispatchableCommands` supplies the deployment restriction.
 
+**Return the command handler outcome.** Rejected because handler settlement can take tens of seconds and would couple dispatch latency to target work. Admission failures remain synchronous because they are the sender's concern; execution results belong to the target transcript, while an optional wait observes target state.
+
 ## Acceptance criteria
 
 - The Service Definition, process-local Provider, tool Consumer, composition, catalogs, and documentation use `ctx.peers` and the `packages/peer/` family; peer-membership commands and events are absent.
 - Two live roots discover one another without setup, while a child Agent is absent because it is not a root.
 - Session-id addressing, unique user-title addressing, duplicate-title ambiguity, automatic-title exclusion, self rejection, rename-safe waits, and target replacement have focused coverage.
 - Send-time tests cover current caller and target liveness, human-interaction blocking, peer-wait delivery, and advisory same-workspace collision reporting under current policy.
-- Recognized peer commands run without inbox delivery, record peer attribution, support state-only waits, and fall back to message delivery for unknown or allowlist-excluded names.
+- Recognized peer commands return before a slow handler settles, record peer attribution without inbox delivery, contain later rejection, support state-only waits, and fall back to message delivery for unknown or allowlist-excluded names.
 - Keyless snapshot scaffolding materializes two roots, renames one through `session.rename`, then lists and sends by title; recording remains a separate real-model action.
 - Generated Cordis, tool, graph, persistence, and composition catalogs contain no membership-removal event or peer-group package.
 

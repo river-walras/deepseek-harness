@@ -16,13 +16,13 @@
 
 `send()` 会重新验证精确调用方是实时根，只解析同级一次，并在执行或 `Agent.followup()` 前立即检查目标当前的 Agent 世代。目标有未完成的人类交互时拒绝操作；仅因同级等待而阻塞的目标仍可寻址。
 
-提供方会在普通投递前同步解析每段文本。命名目标 Agent 已组装命令的斜杠文本会通过该根的命令平面运行，不创建收件箱消息；其他文本使用 `Agent.followup()`。省略 `dispatchableCommands` 时，任一实时根都能在其他任一实时根中运行该根组装的任意命令，包括 `/permission` 和 `/compact`，与人类在该会话中键入命令时一致。部署可以把 `dispatchableCommands` 设为不带斜杠的命令名称，以收窄这项权限。`command/run` 通过 `source.kind = 'peer'` 记录发送会话。
+提供方会在普通投递前同步解析每段文本。命名目标 Agent 已组装命令的斜杠文本会通过该根的命令平面分派，不创建收件箱消息；其他文本使用 `Agent.followup()`。分派会立即返回而不等待处理器结算，后续拒绝会被记录并吞掉。省略 `dispatchableCommands` 时，任一实时根都能在其他任一实时根中启动该根组装的任意命令，包括 `/permission` 和 `/compact`，与人类在该会话中键入命令时一致。部署可以把 `dispatchableCommands` 设为不带斜杠的命令名称，以收窄这项权限。`command/run` 通过 `source.kind = 'peer'` 记录发送会话。
 
 共享可写工作区仅作提示。当两个根都对同一个提供方解析的规范工作区持有写入权限时，列表行与投递受理会带上 `sharesWritableWorkspace`；投递仍会进行。两项分类都读取当前沙箱与审批状态，因此人类策略变更会在下一次调用时生效，无需改变同级状态或追加生命周期事件。
 
 已归档会话被排除在发现之外，也不可作为地址。归档只隐藏侧栏行而不处置 Agent，因此仅凭注册表仍会把它暴露为同级，并让一次投递唤醒人类看不见的工作。
 
-接受消息投递会铸造 `MessageId` 和 `PeerDeliveryId`，并在目标消息来源中记录发送方会话和投递 id。这些归因字段不授予权限。命令结果则标识命令名称、成功状态、可选处理器文本和目标会话。
+接受消息投递会铸造 `MessageId` 和 `PeerDeliveryId`，并在目标消息来源中记录发送方会话和投递 id。这些归因字段不授予权限。接受命令分派则只标识命令名称和目标会话；其结果保留在目标 transcript 中。
 
 ## 等待
 
@@ -64,9 +64,9 @@ abstract resolveWait(options?: PeerWaitOptions): PeerWaitSpec
 abstract list(caller: Agent): readonly PeerView[]
 
 /**
- * Resolve one peer once, authorize, and either run its recognized command or enqueue a follow-up.
+ * Resolve one peer once, authorize, and either dispatch its recognized command or enqueue a follow-up.
  * @param request - caller, peer address, line, optional resolved wait, and cancellation.
- * @returns the command outcome or durable message acceptance, plus any requested observation.
+ * @returns command dispatch or durable message acceptance, plus any requested observation.
  */
 abstract send(request: PeerSendRequest): Promise<PeerSendResult>
 

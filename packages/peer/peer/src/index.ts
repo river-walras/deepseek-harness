@@ -64,9 +64,9 @@ export abstract class PeerRegistry extends Service {
   abstract list(caller: Agent): readonly PeerView[]
 
   /**
-   * Resolve one peer once, authorize, and either run its recognized command or enqueue a follow-up.
+   * Resolve one peer once, authorize, and either dispatch its recognized command or enqueue a follow-up.
    * @param request - caller, peer address, line, optional resolved wait, and cancellation.
-   * @returns the command outcome or durable message acceptance, plus any requested observation.
+   * @returns command dispatch or durable message acceptance, plus any requested observation.
    */
   abstract send(request: PeerSendRequest): Promise<PeerSendResult>
 

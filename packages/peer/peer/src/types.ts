@@ -116,16 +116,12 @@ export interface PeerDeliveryAcceptance {
   readonly sharesWritableWorkspace?: true
 }
 
-/** Outcome of a line the target's command plane recognized and ran. */
+/** Accepted dispatch of a line the target's command plane recognized. */
 export interface PeerCommandExecution {
-  /** Exact target session that ran the command. */
+  /** Exact target session that received the command dispatch. */
   readonly peerSessionId: SessionId
   /** Parsed command name, without the leading slash. */
   readonly name: string
-  /** Whether the handler settled successfully. */
-  readonly ok: boolean
-  /** Handler text, when it returned any. */
-  readonly text?: string
 }
 
 /** Request for one lateral line and optional wait. */
@@ -163,7 +159,7 @@ export type PeerSendResult =
   }
   | {
     readonly kind: 'command'
-    /** Lifecycle outcome reported by the target's command plane. */
+    /** Accepted target command dispatch. */
     readonly command: PeerCommandExecution
     /** Present only when the request included a wait; state-based, uncorrelated. */
     readonly settled?: PeerWaitObservation

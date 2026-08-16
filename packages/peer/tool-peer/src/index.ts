@@ -89,8 +89,9 @@ export function apply(ctx: Context): void {
     description: 'Send a line to an active root peer. Without wait, this returns as soon as delivery is accepted. '
       + 'Acceptance is not a reply; a peer reply arrives through a separate delivery. Supply wait only when this '
       + 'call must follow the delivered message through its own turn. A line starting with a slash that the peer '
-      + 'recognizes runs there as that command instead, exactly as if a person typed it into that session; the '
-      + 'result then reports ranAsCommand and no message is delivered.',
+      + 'recognizes is dispatched there as that command instead, exactly as if a person typed it into that session. '
+      + 'The result reports ranAsCommand but carries no command outcome and delivers no message; read the peer '
+      + 'transcript for the outcome or supply wait to observe peer state.',
     parameters: {
       peer: { ...PEER_PARAMETER, required: true },
       message: {
@@ -118,8 +119,6 @@ export function apply(ctx: Context): void {
             type: 'string',
             description: 'Command name the peer ran instead of receiving a message. No message was delivered.',
           },
-          commandOk: { type: 'boolean', description: 'Whether that command settled successfully.' },
-          commandText: { type: 'string', description: 'Text the command handler returned, when it returned any.' },
           sharesWritableWorkspace: {
             type: 'boolean',
             description:
@@ -156,9 +155,7 @@ export function apply(ctx: Context): void {
         return {
           accepted: true,
           ranAsCommand: result.command.name,
-          commandOk: result.command.ok,
           peer: result.command.peerSessionId,
-          ...result.command.text === undefined ? {} : { commandText: result.command.text },
           ...result.settled === undefined ? {} : { wait: executionValue(result.settled.execution) },
         }
       }

@@ -181,7 +181,7 @@ describe('peer tools', () => {
     expect(jsonResult(result)).toMatchObject({ wait: { state: 'idle', turn: 4 } })
   })
 
-  it('projects command outcomes and uses a state-only wait without a turn', async () => {
+  it('projects command dispatch and uses a state-only wait without a turn', async () => {
     const test = await harness()
     test.registry.send = async (request) => {
       test.registry.sendCalls.push(request)
@@ -190,8 +190,6 @@ describe('peer tools', () => {
         command: {
           peerSessionId: TARGET_ID,
           name: 'compact',
-          ok: true,
-          text: 'compacted',
         },
         ...request.wait === undefined ? {} : {
           settled: {
@@ -207,8 +205,6 @@ describe('peer tools', () => {
     expect(jsonResult(immediate)).toEqual({
       accepted: true,
       ranAsCommand: 'compact',
-      commandOk: true,
-      commandText: 'compacted',
       peer: TARGET_ID,
     })
 
@@ -220,22 +216,8 @@ describe('peer tools', () => {
     expect(jsonResult(waited)).toEqual({
       accepted: true,
       ranAsCommand: 'compact',
-      commandOk: true,
-      commandText: 'compacted',
       peer: TARGET_ID,
       wait: { state: 'idle' },
-    })
-
-    test.registry.send = async () => ({
-      kind: 'command',
-      command: { peerSessionId: TARGET_ID, name: 'silent', ok: false },
-    })
-    const silent = await execute(test, 'send_to_peer', { peer: TARGET_ID, message: '/silent' })
-    expect(jsonResult(silent)).toEqual({
-      accepted: true,
-      ranAsCommand: 'silent',
-      commandOk: false,
-      peer: TARGET_ID,
     })
   })
 

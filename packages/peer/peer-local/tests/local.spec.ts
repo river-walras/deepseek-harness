@@ -281,15 +281,10 @@ describe('LocalPeerRegistry delivery and waits', () => {
         return { kind: 'success', text: 'compacted' }
       },
     })
-    test.ctx.commands.register({
-      name: 'silent',
-      description: 'test silent command',
-      handler: () => ({ kind: 'success' }),
-    })
     const ran = await test.registry.send({ caller: sender.agent, peer: target.agent.id, message: '/compact now' })
     expect(ran).toMatchObject({
       kind: 'command',
-      command: { peerSessionId: target.agent.id, name: 'compact', ok: true, text: 'compacted' },
+      command: { peerSessionId: target.agent.id, name: 'compact' },
     })
     expect(runs).toEqual([' now'])
     expect(target.received).toEqual([])
@@ -304,14 +299,10 @@ describe('LocalPeerRegistry delivery and waits', () => {
     })
     expect(waited).toMatchObject({
       kind: 'command',
-      command: { name: 'compact', ok: true },
+      command: { name: 'compact' },
       settled: { execution: { state: 'idle' } },
     })
     expect(target.received).toEqual([])
-
-    const silent = await test.registry.send({ caller: sender.agent, peer: target.agent.id, message: '/silent' })
-    expect(silent).toMatchObject({ kind: 'command', command: { name: 'silent', ok: true } })
-    expect(silent.kind === 'command' ? silent.command : undefined).not.toHaveProperty('text')
 
     const unknown = await test.registry.send({ caller: sender.agent, peer: target.agent.id, message: '/nope' })
     expect(unknown.kind).toBe('message')
@@ -338,24 +329,35 @@ describe('LocalPeerRegistry delivery and waits', () => {
     expect(target.received).toHaveLength(1)
   })
 
-  it('fails closed when a recognized peer command disappears before execution', async () => {
+  it('returns before a slow command settles and contains its later rejection', async () => {
     const test = await harness(true)
     const sender = test.root('sender')
     const target = test.root('target')
+    let rejectHandler!: (error: Error) => void
     test.ctx.commands.register({
       name: 'compact',
       description: 'test command',
-      handler: () => ({ kind: 'success' }),
+      handler: () => new Promise((_resolve, reject) => { rejectHandler = reject }),
     })
-    vi.spyOn(test.ctx.commands, 'execute').mockResolvedValueOnce(undefined)
+    const warn = vi.spyOn(test.ctx.logger, 'warn').mockImplementation(() => undefined)
 
     await expect(test.registry.send({
       caller: sender.agent,
       peer: target.agent.id,
       message: '/compact',
       signal: new AbortController().signal,
-    })).rejects.toMatchObject({ code: 'SUBSCRIPTION_FAILED' })
+    })).resolves.toMatchObject({
+      kind: 'command',
+      command: { peerSessionId: target.agent.id, name: 'compact' },
+    })
     expect(target.received).toEqual([])
+
+    rejectHandler(new Error('late handler rejection'))
+    await vi.waitFor(() => {
+      expect(warn).toHaveBeenCalledWith(
+        'peer command execution rejected after dispatch: Error: late handler rejection',
+      )
+    })
   })
 
   it('hides archived roots from listing and refuses addressing them', async () => {
