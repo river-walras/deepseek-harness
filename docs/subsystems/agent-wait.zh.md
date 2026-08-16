@@ -8,7 +8,7 @@
 
 ## 租约身份与原因
 
-每个租约都有一个 `AgentWaitLeaseId`、一个所属 `SessionId`，以及 `interaction | peer` 原因。`interaction` 等待表示审批或用户问题尚未结算；`peer` 等待表示 agent（智能体）正在等待同级 agent 组中的另一名成员。一个会话可以同时有多个租约。
+每个租约都有一个 `AgentWaitLeaseId`、一个所属 `SessionId`，以及 `interaction | peer` 原因。`interaction` 等待表示审批或用户问题尚未结算；`peer` 等待表示 agent（智能体）正在等待另一个实时根。一个会话可以同时有多个租约。
 
 精确的进程内 `Agent` 拥有确定性释放：显式释放和 Agent dispose（资源释放）都会令租约以 `released` 结束。外部会话观察带有正数超时；没有确定性所有者释放时，它以 `observation-timeout` 结束。快照只公开会话身份和生命周期种类，绝不公开实时 `Agent` 对象。
 

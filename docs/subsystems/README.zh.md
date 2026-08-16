@@ -43,7 +43,7 @@
 | [workflow.md](workflow.md) | 工作流 seam：`WorkflowStartRequest`、`WorkflowMeta`、`WorkflowRun`/`Result`、`workflow/*` 事件载荷、`WorkflowError` 致命性 |
 | [jobs.md](jobs.md) | 后台任务运行时：品牌化 `JobId`、producer 约定、消费方视图和 `ctx.jobs` 服务行为 |
 | [agent-wait.md](agent-wait.md) | 临时交互／同级 agent 等待租约、epoch 限定的修订号、快照、保留转换和派发时机 |
-| [peer-groups.md](peer-groups.md) | 根会话同级 agent 成员资格、权限、可用性／执行状态、横向投递和有界等待图 |
+| [peers.md](peers.md) | 零配置实时根发现、寻址、发送时权限、横向投递和有界等待图 |
 | [permission-presets.md](permission-presets.md) | 权限预设层：`PresetSpec`/`PresetOption`、派生的 `custom` 状态、仅记日志的 `permission/preset` 事件 |
 | [plan.md](plan.md) | 计划模式：仅记日志的 `plan/mode` 状态、待定选择的冲刷、`PlanModeConfig`、`exit_plan_mode` 审阅流程 |
 | [invariants.md](invariants.md) | 运行时不变式注册表：选择配置 `Config`、`InvariantInstaller`/`InvariantFailure`、空配套插件约定 |

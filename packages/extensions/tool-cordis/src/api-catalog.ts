@@ -493,9 +493,15 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the scoped shadow or global definition.',
       },
       {
-        signature: '@Remote async execute( agent: Agent, line: string, signal: AbortSignal, ): Promise<CommandExecution | undefined>',
-        description: 'Parse and execute a known command without sending it to the model.\n\nA resolved command\'s lifecycle is logged: `command/run` is appended before the handler is invoked and `command/done` after settlement (a thrown or aborted handler settles as `kind: \'error\'`). Both are direct log-only appends — no turn wraps them, and persistence drains them at ordinary checkpoints. Admission misses (syntax or unknown name) log nothing — they never entered a handler. A `command/run` append failure fails the execution loud; a `command/done` append failure on the handler-failure path is contained so the handler\'s own error stays the reported failure.',
+        signature: '@Remote(\'execute\') executeFromUser( agent: Agent, line: string, signal: AbortSignal, ): Promise<CommandExecution | undefined>',
+        description: 'Run a human-issued command through the Remote API, whose cancellation signal must be final.',
         parameters: [{ name: 'agent', description: 'exact receiving agent.' }, { name: 'line', description: 'complete slash-command line.' }, { name: 'signal', description: 'cancellation signal owned by the UI request.' }],
+        returns: 'the settled execution, or `undefined` for invalid syntax or an unknown name.',
+      },
+      {
+        signature: 'async execute( agent: Agent, line: string, signal: AbortSignal, source: CommandSource = { kind: \'user\' }, ): Promise<CommandExecution | undefined>',
+        description: 'Parse and execute a known command without sending it to the model.\n\nA resolved command\'s lifecycle is logged: `command/run` is appended before the handler is invoked and `command/done` after settlement (a thrown or aborted handler settles as `kind: \'error\'`). Both are direct log-only appends — no turn wraps them, and persistence drains them at ordinary checkpoints. Admission misses (syntax or unknown name) log nothing — they never entered a handler. A `command/run` append failure fails the execution loud; a `command/done` append failure on the handler-failure path is contained so the handler\'s own error stays the reported failure.',
+        parameters: [{ name: 'agent', description: 'exact receiving agent.' }, { name: 'line', description: 'complete slash-command line.' }, { name: 'signal', description: 'cancellation signal owned by the UI request.' }, { name: 'source', description: 'who issued the line; defaults to the human-typed `user` surface. A non-human issuer must name itself so `command/run` records the real origin instead of attributing it to the receiving human.' }],
         returns: 'the settled execution (result + lifecycle pairing id), or `undefined` when syntax or name does not resolve.',
       },
     ],
@@ -938,55 +944,33 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
-    key: 'peerGroups',
-    summary: 'Abstract registry for peer membership, authority, delivery, and bounded waits.',
-    description: 'Abstract registry for peer membership, authority, delivery, and bounded waits.\n\nMembership operations admit exact live roots and are exposed only through the human command Consumer. Model-facing Consumers may list and use an existing membership but cannot create, add, remove, or dissolve it.',
+    key: 'peers',
+    summary: 'Abstract registry for active-root discovery, lateral delivery, and bounded waits.',
+    description: 'Abstract registry for active-root discovery, lateral delivery, and bounded waits.\n\nRoot status is the process-local authorization relation. It is not tenant isolation: every live root in one single-user process can address every other live root, including ACP, SDK, and UI roots.',
     methods: [
       {
         signature: 'abstract resolveWait(options?: PeerWaitOptions): PeerWaitSpec',
         description: 'Resolve optional wait fields against the provider\'s validated timeout configuration.',
-        parameters: [{ name: 'options', description: 'optional predicate and timeout from a Consumer boundary.' }],
+        parameters: [{ name: 'options', description: 'optional predicate and timeout from a Consumer input.' }],
         returns: 'a non-empty predicate and bounded timeout accepted by operations.',
       },
       {
-        signature: 'abstract create(caller: Agent, name: string): Promise<PeerGroupView>',
-        description: 'Create a named group and enroll the invoking live root as its first member.',
-        parameters: [{ name: 'caller', description: 'exact root receiving the human command.' }, { name: 'name', description: 'unique non-empty group name.' }],
-        returns: 'the new group projection.',
-      },
-      {
-        signature: 'abstract add(caller: Agent, groupId: PeerGroupId, sessionId: SessionId): Promise<PeerMemberView>',
-        description: 'Enroll an existing exact live root after workspace write admission.',
-        parameters: [{ name: 'caller', description: 'exact member receiving the human command.' }, { name: 'groupId', description: 'group to change.' }, { name: 'sessionId', description: 'existing root session to enroll.' }],
-        returns: 'the admitted membership projection.',
-      },
-      {
-        signature: 'abstract remove(caller: Agent, groupId: PeerGroupId, sessionId: SessionId): Promise<void>',
-        description: 'Revoke one membership and terminate every wait pinned to its incarnation.',
-        parameters: [{ name: 'caller', description: 'exact member receiving the human command.' }, { name: 'groupId', description: 'group to change.' }, { name: 'sessionId', description: 'enrolled session to remove.' }],
-      },
-      {
-        signature: 'abstract dissolve(caller: Agent, groupId: PeerGroupId): Promise<void>',
-        description: 'Dissolve a group, revoke every grant, and terminate its waits.',
-        parameters: [{ name: 'caller', description: 'exact member receiving the human command.' }, { name: 'groupId', description: 'group to dissolve.' }],
-      },
-      {
-        signature: 'abstract list(caller: Agent, groupId?: PeerGroupId): readonly PeerGroupView[]',
-        description: 'List groups visible to an exact member, optionally narrowing by id.',
-        parameters: [{ name: 'caller', description: 'reading live member.' }, { name: 'groupId', description: 'optional exact group.' }],
-        returns: 'fresh projections without canonical workspace identities.',
+        signature: 'abstract list(caller: Agent): readonly PeerView[]',
+        description: 'List every other active root after revalidating the exact caller as a root.',
+        parameters: [{ name: 'caller', description: 'exact root requesting discovery.' }],
+        returns: 'fresh peer projections in root registration order.',
       },
       {
         signature: 'abstract send(request: PeerSendRequest): Promise<PeerSendResult>',
-        description: 'Authorize and enqueue one ordinary peer follow-up, optionally waiting for the exact claimed message turn to reach a requested state.',
-        parameters: [{ name: 'request', description: 'caller, peer address, message, optional resolved wait, and cancellation.' }],
-        returns: 'durable acceptance and optional delivery-correlated observation.',
+        description: 'Resolve one peer once, authorize, and either run its recognized command or enqueue a follow-up.',
+        parameters: [{ name: 'request', description: 'caller, peer address, line, optional resolved wait, and cancellation.' }],
+        returns: 'the command outcome or durable message acceptance, plus any requested observation.',
       },
       {
         signature: 'abstract wait(request: PeerWaitRequest): Promise<PeerWaitObservation>',
-        description: 'Install a cycle-checked standalone wait edge and observe the target state.',
+        description: 'Resolve one peer once, install a process-wide cycle-checked wait edge, and observe its state.',
         parameters: [{ name: 'request', description: 'caller, peer address, resolved bounded predicate, and cancellation.' }],
-        returns: 'the matching state for the pinned membership incarnation.',
+        returns: 'the matching state of the exact resolved Agent generation.',
       },
     ],
   },
@@ -2950,6 +2934,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type CommandResult = {\n    readonly kind: \'success\';\n    readonly text?: string;\n    readonly sourceEventSeq?: number;\n} | {\n    readonly kind: \'error\';\n    readonly text: string;\n};',
   },
   {
+    name: 'CommandSource',
+    declaration: 'export type CommandSource = CommandSourceMap[keyof CommandSourceMap];',
+  },
+  {
+    name: 'CommandSourceMap',
+    declaration: 'export interface CommandSourceMap {\n    user: {\n        kind: \'user\';\n    };\n    peer: {\n        kind: \'peer\';\n        senderSessionId: SessionId;\n    };\n}',
+  },
+  {
     name: 'CompactionAgentContext',
     declaration: 'export interface CompactionAgentContext {\n    session: Session;\n    options: {\n        provider?: string;\n        model?: string;\n    };\n}',
   },
@@ -3618,12 +3610,12 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface OneShotSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'one-shot\';\n    readonly label?: string;\n}',
   },
   {
-    name: 'PeerAvailability',
-    declaration: 'export type PeerAvailability = \'live\' | \'inactive\';',
+    name: 'PeerCommandExecution',
+    declaration: 'export interface PeerCommandExecution {\n    readonly peerSessionId: SessionId;\n    readonly name: string;\n    readonly ok: boolean;\n    readonly text?: string;\n}',
   },
   {
     name: 'PeerDeliveryAcceptance',
-    declaration: 'export interface PeerDeliveryAcceptance {\n    readonly deliveryId: PeerDeliveryId;\n    readonly messageId: MessageId;\n    readonly peer: PeerMembership;\n}',
+    declaration: 'export interface PeerDeliveryAcceptance {\n    readonly deliveryId: PeerDeliveryId;\n    readonly messageId: MessageId;\n    readonly peerSessionId: SessionId;\n    readonly sharesWritableWorkspace?: true;\n}',
   },
   {
     name: 'PeerDeliveryId',
@@ -3634,36 +3626,20 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type PeerExecutionStatus = {\n    readonly state: \'working\';\n} | {\n    readonly state: \'idle\';\n} | {\n    readonly state: \'blocked\';\n    readonly reason: AgentWaitReason;\n};',
   },
   {
-    name: 'PeerGroupId',
-    declaration: 'export type PeerGroupId = Branded<\'PeerGroupId\'>;',
-  },
-  {
-    name: 'PeerGroupView',
-    declaration: 'export interface PeerGroupView {\n    readonly id: PeerGroupId;\n    readonly name: string;\n    readonly members: readonly PeerMemberView[];\n}',
-  },
-  {
-    name: 'PeerMembership',
-    declaration: 'export interface PeerMembership {\n    readonly groupId: PeerGroupId;\n    readonly sessionId: SessionId;\n    readonly incarnation: PeerMembershipIncarnation;\n}',
-  },
-  {
-    name: 'PeerMembershipIncarnation',
-    declaration: 'export type PeerMembershipIncarnation = Branded<\'PeerMembershipIncarnation\'>;',
-  },
-  {
-    name: 'PeerMemberView',
-    declaration: 'export interface PeerMemberView extends PeerMembership {\n    readonly title?: string;\n    readonly workspace?: string;\n    readonly availability: PeerAvailability;\n    readonly execution?: PeerExecutionStatus;\n    readonly writeAccess: PeerWriteAccess;\n}',
-  },
-  {
-    name: 'PeerRef',
-    declaration: 'export interface PeerRef {\n    readonly group?: PeerGroupId;\n    readonly session: SessionId;\n}',
-  },
-  {
     name: 'PeerSendRequest',
-    declaration: 'export interface PeerSendRequest {\n    readonly caller: Agent;\n    readonly peer: PeerRef;\n    readonly message: string;\n    readonly wait?: PeerWaitSpec;\n    readonly signal?: AbortSignal;\n}',
+    declaration: 'export interface PeerSendRequest {\n    readonly caller: Agent;\n    readonly peer: string;\n    readonly message: string;\n    readonly wait?: PeerWaitSpec;\n    readonly signal?: AbortSignal;\n}',
   },
   {
     name: 'PeerSendResult',
-    declaration: 'export interface PeerSendResult {\n    readonly delivery: PeerDeliveryAcceptance;\n    readonly settled?: PeerWaitObservation & {\n        readonly turn: number;\n    };\n}',
+    declaration: 'export type PeerSendResult = {\n    readonly kind: \'message\';\n    readonly delivery: PeerDeliveryAcceptance;\n    readonly settled?: PeerWaitObservation & {\n        readonly turn: number;\n    };\n} | {\n    readonly kind: \'command\';\n    readonly command: PeerCommandExecution;\n    readonly settled?: PeerWaitObservation;\n};',
+  },
+  {
+    name: 'PeerTitleSource',
+    declaration: 'export type PeerTitleSource = \'user\' | \'automatic\';',
+  },
+  {
+    name: 'PeerView',
+    declaration: 'export type PeerView = {\n    readonly sessionId: SessionId;\n    readonly workspace?: string;\n    readonly preset?: string;\n    readonly execution: PeerExecutionStatus;\n    readonly writeAccess: PeerWriteAccess;\n    readonly sharesWritableWorkspace?: true;\n} & ({\n    readonly title: string;\n    readonly titleSource: PeerTitleSource;\n} | {\n    readonly title?: never;\n    readonly titleSource?: never;\n});',
   },
   {
     name: 'PeerWaitId',
@@ -3671,7 +3647,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'PeerWaitObservation',
-    declaration: 'export interface PeerWaitObservation {\n    readonly waitId: PeerWaitId;\n    readonly peer: PeerMembership;\n    readonly execution: PeerExecutionStatus;\n}',
+    declaration: 'export interface PeerWaitObservation {\n    readonly waitId: PeerWaitId;\n    readonly peerSessionId: SessionId;\n    readonly execution: PeerExecutionStatus;\n}',
   },
   {
     name: 'PeerWaitOptions',
@@ -3679,7 +3655,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'PeerWaitRequest',
-    declaration: 'export interface PeerWaitRequest {\n    readonly caller: Agent;\n    readonly peer: PeerRef;\n    readonly wait: PeerWaitSpec;\n    readonly signal?: AbortSignal;\n}',
+    declaration: 'export interface PeerWaitRequest {\n    readonly caller: Agent;\n    readonly peer: string;\n    readonly wait: PeerWaitSpec;\n    readonly signal?: AbortSignal;\n}',
   },
   {
     name: 'PeerWaitSpec',

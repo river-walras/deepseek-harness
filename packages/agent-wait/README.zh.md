@@ -10,4 +10,4 @@
 | [`agent-wait-local/`](agent-wait-local/README.md) | 提供进程内注册表 | 注册到 `ctx.agentWaits` |
 | [`agent-wait-interaction/`](agent-wait-interaction/README.md) | 从问题和审批派生交互租约 | 消费 `ctx.agentWaits` |
 
-拟议的[跨会话同级 agent 协作](../../.agents/notes/proposed/feature/2026-08-14-cross-session-peer-collaboration.md) Agent Note 负责该设计。公开词汇收录于 [docs/subsystems/agent-wait.md](../../docs/subsystems/agent-wait.md)。
+拟议的[零配置根同级协作](../../.agents/notes/proposed/feature/2026-08-15-zero-setup-root-peer-collaboration.md) Agent Note 负责本服务的同级等待用法。公开词汇收录于 [docs/subsystems/agent-wait.md](../../docs/subsystems/agent-wait.md)。

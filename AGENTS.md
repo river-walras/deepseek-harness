@@ -27,7 +27,7 @@ packages/    @deepseek-ai/dsh-<pkg> workspaces at packages/<group>/<pkg>/
   context/     request-context plugins
   subagent/    subagent capability: Service Definition + providers + delegation Consumers
   agent-wait/  wait leases + local provider + interaction Consumer
-  peer-group/  root peers, lateral delivery, waits, commands, tools
+  peer/        zero-setup root peers, lateral delivery, waits, tools
   bundle/      installable dsh --profile patch-layer bundles
   workflow/    workflow capability + worker-thread provider + tool Consumer
   todo/        todo_write tool

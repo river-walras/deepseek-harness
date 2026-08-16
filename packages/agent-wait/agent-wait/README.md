@@ -13,7 +13,7 @@ Service Definition for `ctx.agentWaits`, the process-local registry of reasons a
 
 Leases are runtime observations, not durable session facts. This package adds no `SessionEventMap` member. A model sees a wait only through a Consumer's logged tool result.
 
-See the [agent-wait subsystem reference](../../../docs/subsystems/agent-wait.md) and the proposed [peer collaboration design](../../../.agents/notes/proposed/feature/2026-08-14-cross-session-peer-collaboration.md).
+See the [agent-wait subsystem reference](../../../docs/subsystems/agent-wait.md) and the proposed [zero-setup peer collaboration design](../../../.agents/notes/proposed/feature/2026-08-15-zero-setup-root-peer-collaboration.md).
 
 ## Model Experience
 

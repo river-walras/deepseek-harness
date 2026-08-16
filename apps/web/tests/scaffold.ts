@@ -792,6 +792,34 @@ export async function seedBlankSession(
   return meta.id
 }
 
+/** Materialize one live root Session through the same host API the browser uses. */
+export async function materializeRootSession(
+  scaffold: WebScaffold,
+  sessionId: SessionId,
+  cwd: string,
+): Promise<SessionId> {
+  const response = await scaffold.ctx.apiProxy.sessions.create({
+    rpcId: `scaffold-create-${sessionId}` as never,
+    payload: { sessionId, cwd },
+  })
+  if (!response.result.ok) throw new Error(`session.create failed: ${response.result.error.message}`)
+  return response.result.value.sessionId
+}
+
+/** Apply a user-source title through the shipped session rename API. */
+export async function renameRootSession(
+  scaffold: WebScaffold,
+  sessionId: SessionId,
+  title: string,
+): Promise<string> {
+  const response = await scaffold.ctx.apiProxy.sessions.rename({
+    rpcId: `scaffold-rename-${sessionId}` as never,
+    payload: { sessionId, title },
+  })
+  if (!response.result.ok) throw new Error(`session.rename failed: ${response.result.error.message}`)
+  return response.result.value.title
+}
+
 /** Materialize one detached Session fixture through the shipped JSONL provider. */
 async function persistSeedSession(
   scaffold: WebScaffold,

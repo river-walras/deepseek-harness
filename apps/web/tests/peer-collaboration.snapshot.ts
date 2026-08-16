@@ -1,4 +1,4 @@
-// Pending real-model evidence for the shipped peer command and tools. The
+// Pending real-model evidence for the shipped peer tools. The
 // scenario remains absent from keyless replay until record mode creates both
 // correlated root-session fixtures and the browser golden in one run.
 import { existsSync } from 'node:fs'
@@ -8,11 +8,11 @@ import { join } from 'node:path'
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
-import type { AgentHandle } from '@deepseek-ai/dsh-agent'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-agent-presets'
 import {
-  captureStableAria, compareOrRefreshGolden, launchWebScaffold, recordFixtureSet,
+  captureStableAria, compareOrRefreshGolden, launchWebScaffold, materializeRootSession,
+  recordFixtureSet, renameRootSession,
   watchConsole, webSnapshotMode, type WebScaffold,
 } from './scaffold.ts'
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
@@ -22,12 +22,13 @@ const MAIN_FIXTURE = join(SNAPSHOT_DIR, 'session.jsonl')
 const PEER_FIXTURE = join(SNAPSHOT_DIR, 'session.1.jsonl')
 const UI_EXPECTED = join(SNAPSHOT_DIR, 'ui.expected.md')
 const PEER_ID = SessionId('peer-collaboration-target')
+const PEER_TITLE = 'Snapshot Peer'
 const MODE = webSnapshotMode()
 const RECORDED = [MAIN_FIXTURE, PEER_FIXTURE, UI_EXPECTED].every(existsSync)
 
 const PROMPT = [
-  'Use list_peers once with group snapshot_team.',
-  `Then use send_to_peer once for session ${PEER_ID} in group snapshot_team,`,
+  'Use list_peers exactly once.',
+  `Then use send_to_peer exactly once for the peer titled "${PEER_TITLE}",`,
   'with message "Reply with exactly PEER_REPLY_OK and nothing else." and wait until idle.',
   'After the wait completes, reply with exactly PEER_FLOW_DONE and stop.',
 ].join(' ')
@@ -37,7 +38,6 @@ describe.skipIf(MODE !== 'record' && !RECORDED)('web snapshot: peer collaboratio
   let browser: Browser
   let page: Page
   let mainId: SessionId
-  let peerHandle: AgentHandle
   let tripwire: ReturnType<typeof watchConsole>
 
   beforeAll(async () => {
@@ -57,31 +57,19 @@ describe.skipIf(MODE !== 'record' && !RECORDED)('web snapshot: peer collaboratio
 
     const peerCwd = join(scaffold.workspaceCwd, 'peer-workspace')
     await mkdir(peerCwd, { recursive: true })
-    peerHandle = await scaffold.ctx.agents.create({
-      sessionId: PEER_ID,
-      meta: { cwd: peerCwd },
-      setup: agentCtx => scaffold.ctx.agentPresets.mount(agentCtx).then(() => undefined),
-    })
+    expect(await materializeRootSession(scaffold, PEER_ID, peerCwd)).toBe(PEER_ID)
+    expect(await renameRootSession(scaffold, PEER_ID, PEER_TITLE)).toBe(PEER_TITLE)
+    expect(scaffold.ctx.agents.roots()).toHaveLength(2)
   }, 120_000)
 
   afterAll(async () => {
     await browser?.close()
-    await peerHandle?.dispose()
     await scaffold?.close()
   })
 
-  it('records human formation and one delivery-correlated model exchange', async () => {
+  it('records zero-setup discovery and one delivery-correlated model exchange by user title', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-snapshot-peer-collaboration'))
     const input = page.locator('textarea').first()
-    await input.fill('/peer create snapshot_team')
-    await input.press('Enter')
-    await page.getByText("Created peer group 'snapshot_team'.", { exact: false }).waitFor({ timeout: 10_000 })
-
-    await input.fill(`/peer add snapshot_team ${PEER_ID}`)
-    await input.press('Enter')
-    await page.getByText(`Added '${PEER_ID}' to peer group 'snapshot_team'.`, { exact: true })
-      .waitFor({ timeout: 10_000 })
-
     await input.fill(PROMPT)
     await input.press('Enter')
     await page.getByText('PEER_FLOW_DONE', { exact: true }).waitFor({ timeout: 180_000 })

@@ -1092,9 +1092,6 @@ importers:
       '@deepseek-ai/dsh-command-goal':
         specifier: workspace:^
         version: link:../../goal/command-goal
-      '@deepseek-ai/dsh-command-peer':
-        specifier: workspace:^
-        version: link:../../peer-group/command-peer
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../../interaction/commands
@@ -1137,9 +1134,9 @@ importers:
       '@deepseek-ai/dsh-llm-retry':
         specifier: workspace:^
         version: link:../../llm/llm-retry
-      '@deepseek-ai/dsh-peer-group-local':
+      '@deepseek-ai/dsh-peer-local':
         specifier: workspace:^
-        version: link:../../peer-group/peer-group-local
+        version: link:../../peer/peer-local
       '@deepseek-ai/dsh-permission-presets':
         specifier: workspace:^
         version: link:../../interaction/permission-presets
@@ -1241,7 +1238,7 @@ importers:
         version: link:../../jobs/tool-jobs
       '@deepseek-ai/dsh-tool-peer':
         specifier: workspace:^
-        version: link:../../peer-group/tool-peer
+        version: link:../../peer/tool-peer
       '@deepseek-ai/dsh-tool-pwsh':
         specifier: workspace:^
         version: link:../../shell/tool-pwsh
@@ -5592,40 +5589,7 @@ importers:
         specifier: ^2026.7.4
         version: 2026.7.10(zod@4.4.3)
 
-  packages/peer-group/command-peer:
-    devDependencies:
-      '@deepseek-ai/cordis':
-        specifier: workspace:^
-        version: link:../../../vendor/cordis
-      '@deepseek-ai/cordis-plugin-loader':
-        specifier: workspace:^
-        version: link:../../../vendor/loader
-      '@deepseek-ai/dsh-agent':
-        specifier: workspace:^
-        version: link:../../core/agent
-      '@deepseek-ai/dsh-agent-wait-local':
-        specifier: workspace:^
-        version: link:../../agent-wait/agent-wait-local
-      '@deepseek-ai/dsh-commands':
-        specifier: workspace:^
-        version: link:../../interaction/commands
-      '@deepseek-ai/dsh-invariants':
-        specifier: workspace:^
-        version: link:../../runtime-diagnostics/invariants
-      '@deepseek-ai/dsh-peer-group':
-        specifier: workspace:^
-        version: link:../peer-group
-      '@deepseek-ai/dsh-peer-group-local':
-        specifier: workspace:^
-        version: link:../peer-group-local
-      '@deepseek-ai/dsh-sandbox-policy':
-        specifier: workspace:^
-        version: link:../../sandbox/sandbox-policy
-      '@deepseek-ai/dsh-session':
-        specifier: workspace:^
-        version: link:../../core/session
-
-  packages/peer-group/peer-group:
+  packages/peer/peer:
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5639,6 +5603,9 @@ importers:
       '@deepseek-ai/dsh-brand':
         specifier: workspace:^
         version: link:../../util/brand
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../interaction/commands
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
@@ -5649,7 +5616,7 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
 
-  packages/peer-group/peer-group-local:
+  packages/peer/peer-local:
     dependencies:
       '@deepseek-ai/schemastery':
         specifier: link:../../../vendor/schemastery
@@ -5661,21 +5628,27 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../core/agent
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../preset/agent-presets
       '@deepseek-ai/dsh-agent-wait':
         specifier: workspace:^
         version: link:../../agent-wait/agent-wait
       '@deepseek-ai/dsh-agent-wait-local':
         specifier: workspace:^
         version: link:../../agent-wait/agent-wait-local
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../interaction/commands
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
-      '@deepseek-ai/dsh-peer-group':
+      '@deepseek-ai/dsh-peer':
         specifier: workspace:^
-        version: link:../peer-group
+        version: link:../peer
       '@deepseek-ai/dsh-sandbox-policy':
         specifier: workspace:^
         version: link:../../sandbox/sandbox-policy
@@ -5691,8 +5664,11 @@ importers:
       '@deepseek-ai/dsh-user-approval':
         specifier: workspace:^
         version: link:../../interaction/user-approval
+      '@deepseek-ai/dsh-workspace':
+        specifier: workspace:^
+        version: link:../../workspace/workspace
 
-  packages/peer-group/tool-peer:
+  packages/peer/tool-peer:
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^
@@ -5712,24 +5688,18 @@ importers:
       '@deepseek-ai/dsh-agent-wait-local':
         specifier: workspace:^
         version: link:../../agent-wait/agent-wait-local
-      '@deepseek-ai/dsh-command-peer':
-        specifier: workspace:^
-        version: link:../command-peer
-      '@deepseek-ai/dsh-commands':
-        specifier: workspace:^
-        version: link:../../interaction/commands
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
-      '@deepseek-ai/dsh-peer-group':
+      '@deepseek-ai/dsh-peer':
         specifier: workspace:^
-        version: link:../peer-group
-      '@deepseek-ai/dsh-peer-group-local':
+        version: link:../peer
+      '@deepseek-ai/dsh-peer-local':
         specifier: workspace:^
-        version: link:../peer-group-local
+        version: link:../peer-local
       '@deepseek-ai/dsh-sandbox-policy':
         specifier: workspace:^
         version: link:../../sandbox/sandbox-policy

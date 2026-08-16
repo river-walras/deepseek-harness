@@ -8,7 +8,7 @@ Source: [`packages/agent-wait/agent-wait/src/index.ts`](../../packages/agent-wai
 
 ## Lease identity and reasons
 
-Each lease has an `AgentWaitLeaseId`, one owning `SessionId`, and reason `interaction | peer`. An `interaction` wait means an approval or user question is outstanding; a `peer` wait means the agent is waiting on another peer-group member. Several leases may coexist for one session.
+Each lease has an `AgentWaitLeaseId`, one owning `SessionId`, and reason `interaction | peer`. An `interaction` wait means an approval or user question is outstanding; a `peer` wait means the agent is waiting on another live root. Several leases may coexist for one session.
 
 An exact in-process `Agent` owns deterministic release: explicit release and Agent disposal end the lease as `released`. A foreign-session observation carries a positive timeout and ends as `observation-timeout` if no deterministic owner releases it. Snapshots expose only session identity and lifetime kind, never the live `Agent` object.
 

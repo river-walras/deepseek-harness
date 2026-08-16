@@ -300,7 +300,7 @@ const subsystemGroups = [
     ['plan.md', '计划模式', 'Plan mode'],
     ['user-questions.md', '用户交互', 'User interaction'],
     ['commands.md', '命令', 'Human commands'],
-    ['peer-groups.md', '同级 Agent 组', 'Peer groups'],
+    ['peers.md', '同级 Agent', 'Peers'],
     ['goal.md', '目标', 'Goals'],
     ['schedule.md', '定时提醒', 'Scheduled reminders'],
   ]],

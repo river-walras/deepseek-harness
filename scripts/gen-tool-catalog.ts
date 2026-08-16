@@ -64,17 +64,16 @@ import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
 import * as ToolWorkflow from '@deepseek-ai/dsh-tool-workflow'
 import * as ToolPeer from '@deepseek-ai/dsh-tool-peer'
-import PeerGroupRegistry from '@deepseek-ai/dsh-peer-group'
+import PeerRegistry from '@deepseek-ai/dsh-peer'
 import type {
-  PeerGroupView,
-  PeerMemberView,
   PeerSendRequest,
   PeerSendResult,
+  PeerView,
   PeerWaitObservation,
   PeerWaitOptions,
   PeerWaitRequest,
   PeerWaitSpec,
-} from '@deepseek-ai/dsh-peer-group'
+} from '@deepseek-ai/dsh-peer'
 import { githubSlug } from './verify-md-links.ts'
 
 /** Attachment seam marker that makes the attachments-conditional `read_image` schema harvestable. */
@@ -101,36 +100,12 @@ class CatalogAttachmentStore extends AttachmentStore {
 }
 
 /** Schema-harvest peer service; catalog generation never executes a peer operation. */
-class CatalogPeerGroupRegistry extends PeerGroupRegistry {
+class CatalogPeerRegistry extends PeerRegistry {
   override resolveWait(_options?: PeerWaitOptions): PeerWaitSpec {
     return { until: ['idle'], timeoutMs: 1 }
   }
 
-  override create(_caller: Agent, _name: string): Promise<PeerGroupView> {
-    return Promise.reject(new Error('tool-catalog peer creation is unreachable'))
-  }
-
-  override add(
-    _caller: Agent,
-    _groupId: Parameters<PeerGroupRegistry['add']>[1],
-    _sessionId: SessionId,
-  ): Promise<PeerMemberView> {
-    return Promise.reject(new Error('tool-catalog peer admission is unreachable'))
-  }
-
-  override remove(
-    _caller: Agent,
-    _groupId: Parameters<PeerGroupRegistry['remove']>[1],
-    _sessionId: SessionId,
-  ): Promise<void> {
-    return Promise.reject(new Error('tool-catalog peer removal is unreachable'))
-  }
-
-  override dissolve(_caller: Agent, _groupId: Parameters<PeerGroupRegistry['dissolve']>[1]): Promise<void> {
-    return Promise.reject(new Error('tool-catalog peer dissolution is unreachable'))
-  }
-
-  override list(_caller: Agent, _groupId?: Parameters<PeerGroupRegistry['list']>[1]): readonly PeerGroupView[] {
+  override list(_caller: Agent): readonly PeerView[] {
     return []
   }
 
@@ -448,15 +423,15 @@ const TOOL_PACKAGES: ToolPackage[] = [
   {
     pkg: '@deepseek-ai/dsh-tool-peer',
     dir: 'tool-peer',
-    source: 'packages/peer-group/tool-peer/src/index.ts',
-    requires: ['ctx.tools', 'ctx.peerGroups', 'a calling root Agent with peer membership'],
+    source: 'packages/peer/tool-peer/src/index.ts',
+    requires: ['ctx.tools', 'ctx.peers', 'a calling live root Agent'],
     writes: ['tool/call', 'peer message delivery through the target inbox', 'tool/result'],
     async mount(ctx) {
-      await ctx.plugin(CatalogPeerGroupRegistry)
+      await ctx.plugin(CatalogPeerRegistry)
       await ctx.plugin(ToolPeer)
     },
     note:
-      'send_to_peer defaults to delivery acceptance without waiting; its optional wait follows that exact message turn. wait_for_peer observes state independently, and list_peers exposes only current shared memberships.',
+      'send_to_peer defaults to delivery acceptance without waiting; its optional wait follows that exact message turn. wait_for_peer observes state independently, and list_peers discovers every other live root with no setup.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-ralph',

@@ -31,7 +31,7 @@ Groups hold `packages/<group>/<pkg>/`; names stay `@deepseek-ai/dsh-<pkg>`. **Gr
 | [`context/`](context/README.md) | Model-visible request context, including workspace instructions and time context | Product — stable API |
 | [`subagent/`](subagent/README.md) | Subagent capability family: the provider-registry contract and the model-facing delegation tool | Product — stable API |
 | [`agent-wait/`](agent-wait/README.md) | Ephemeral agent wait leases, process-local observation, and interaction derivation | Product — stable API |
-| [`peer-group/`](peer-group/README.md) | Human-formed root-session peer groups, lateral delivery, and bounded waits | Product — stable API |
+| [`peer/`](peer/README.md) | Zero-setup live-root discovery, lateral delivery, and bounded waits | Product — stable API |
 | [`jobs/`](jobs/README.md) | Generic background-job runtime and model-facing `job_*` control tools | Product — stable API |
 | [`workflow/`](workflow/README.md) | Workflow seam, worker-thread engine, and model-facing `workflow`/`ralph` tools | Product — stable API |
 | [`web/`](web/README.md) | Web capability family: seam, search/fetch provider impls, and the model-facing web tools | Product — stable API |

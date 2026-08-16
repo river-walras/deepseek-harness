@@ -13,7 +13,7 @@
 
 租约是运行时观察结果，不是持久会话事实。本包不添加 `SessionEventMap` 成员。模型只会通过消费方已记录的工具结果看到等待。
 
-参见 [agent-wait 子系统参考](../../../docs/subsystems/agent-wait.md)和拟议的[同级 agent 协作设计](../../../.agents/notes/proposed/feature/2026-08-14-cross-session-peer-collaboration.md)。
+参见 [agent-wait 子系统参考](../../../docs/subsystems/agent-wait.md)和拟议的[零配置同级协作设计](../../../.agents/notes/proposed/feature/2026-08-15-zero-setup-root-peer-collaboration.md)。
 
 ## 模型体验
 

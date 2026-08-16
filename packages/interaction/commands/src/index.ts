@@ -15,6 +15,7 @@ import type {
   CommandExecution,
   CommandInputDescriptor,
   CommandResult,
+  CommandSource,
 } from './types.ts'
 
 export { CommandId } from './brand.ts'
@@ -275,6 +276,22 @@ export class CommandRuntime extends TypertRemoteService {
   }
 
   /**
+   * Run a human-issued command through the Remote API, whose cancellation signal must be final.
+   * @param agent - exact receiving agent.
+   * @param line - complete slash-command line.
+   * @param signal - cancellation signal owned by the UI request.
+   * @returns the settled execution, or `undefined` for invalid syntax or an unknown name.
+   */
+  @Remote('execute')
+  executeFromUser(
+    agent: Agent,
+    line: string,
+    signal: AbortSignal,
+  ): Promise<CommandExecution | undefined> {
+    return this.execute(agent, line, signal)
+  }
+
+  /**
    * Parse and execute a known command without sending it to the model.
    *
    * A resolved command's lifecycle is logged: `command/run` is appended
@@ -290,14 +307,17 @@ export class CommandRuntime extends TypertRemoteService {
    * @param agent - exact receiving agent.
    * @param line - complete slash-command line.
    * @param signal - cancellation signal owned by the UI request.
+   * @param source - who issued the line; defaults to the human-typed `user`
+   *   surface. A non-human issuer must name itself so `command/run` records
+   *   the real origin instead of attributing it to the receiving human.
    * @returns the settled execution (result + lifecycle pairing id), or
    *   `undefined` when syntax or name does not resolve.
    */
-  @Remote
   async execute(
     agent: Agent,
     line: string,
     signal: AbortSignal,
+    source: CommandSource = { kind: 'user' },
   ): Promise<CommandExecution | undefined> {
     const parsed = parseCommand(line)
     if (parsed === undefined) return undefined
@@ -309,7 +329,7 @@ export class CommandRuntime extends TypertRemoteService {
       commandId,
       name: parsed.name,
       ...command.definition.recordInput === false ? {} : { args: parsed.rawInput },
-      source: { kind: 'user' },
+      source,
     })
     const invocation = Object.freeze({ commandId, agent, rawInput: parsed.rawInput, signal })
     let result: CommandResult

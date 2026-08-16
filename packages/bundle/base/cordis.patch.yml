@@ -70,14 +70,11 @@
     - id: agent-wait-interaction
       name: '@deepseek-ai/dsh-agent-wait-interaction'
 
-    - id: peer-group-local
-      name: '@deepseek-ai/dsh-peer-group-local'
+    - id: peer-local
+      name: '@deepseek-ai/dsh-peer-local'
       config:
         defaultWaitTimeoutMs: 300000
         maxWaitTimeoutMs: 1800000
-
-    - id: command-peer
-      name: '@deepseek-ai/dsh-command-peer'
 
     - id: tool-peer
       name: '@deepseek-ai/dsh-tool-peer'

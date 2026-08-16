@@ -111,7 +111,10 @@ describe('minimal agent preset', () => {
         "prompt": "You are a helpful software engineer assistant.",
         "tools": [
           "bash",
+          "list_peers",
+          "send_to_peer",
           "str_replace_editor",
+          "wait_for_peer",
         ],
       }
     `)

@@ -138,6 +138,15 @@ register(definition: CommandDefinition): () => void
 find(agent: Agent, name: string): CommandDefinition | undefined
 
 /**
+ * Run a human-issued command through the Remote API, whose cancellation signal must be final.
+ * @param agent - exact receiving agent.
+ * @param line - complete slash-command line.
+ * @param signal - cancellation signal owned by the UI request.
+ * @returns the settled execution, or `undefined` for invalid syntax or an unknown name.
+ */
+@Remote('execute') executeFromUser( agent: Agent, line: string, signal: AbortSignal, ): Promise<CommandExecution | undefined>
+
+/**
  * Parse and execute a known command without sending it to the model.
  *
  * A resolved command's lifecycle is logged: `command/run` is appended
@@ -153,15 +162,18 @@ find(agent: Agent, name: string): CommandDefinition | undefined
  * @param agent - exact receiving agent.
  * @param line - complete slash-command line.
  * @param signal - cancellation signal owned by the UI request.
+ * @param source - who issued the line; defaults to the human-typed `user`
+ *   surface. A non-human issuer must name itself so `command/run` records
+ *   the real origin instead of attributing it to the receiving human.
  * @returns the settled execution (result + lifecycle pairing id), or
  *   `undefined` when syntax or name does not resolve.
  */
-@Remote async execute( agent: Agent, line: string, signal: AbortSignal, ): Promise<CommandExecution | undefined>
+async execute( agent: Agent, line: string, signal: AbortSignal, source: CommandSource = { kind: 'user' }, ): Promise<CommandExecution | undefined>
 ```
 
 Types: [Agent](core.md)
 
-Source: [`packages/interaction/commands/src/index.ts:225`](../../packages/interaction/commands/src/index.ts)
+Source: [`packages/interaction/commands/src/index.ts:226`](../../packages/interaction/commands/src/index.ts)
 
 <a id="commands-events"></a>
 
@@ -183,5 +195,5 @@ A command was registered or unregistered. This is an unfiltered registry notific
 'commands/change'(): void
 ```
 
-Source: [`packages/interaction/commands/src/types.ts:72`](../../packages/interaction/commands/src/types.ts)
+Source: [`packages/interaction/commands/src/types.ts:82`](../../packages/interaction/commands/src/types.ts)
 <!-- END GENERATED cordis-surface -->

@@ -10,4 +10,4 @@ This family publishes ephemeral reasons that a live agent cannot continue so run
 | [`agent-wait-local/`](agent-wait-local/README.md) | Provides the process-local registry | registers on `ctx.agentWaits` |
 | [`agent-wait-interaction/`](agent-wait-interaction/README.md) | Derives interaction leases from questions and approvals | consumes `ctx.agentWaits` |
 
-The proposed [cross-session peer collaboration](../../.agents/notes/proposed/feature/2026-08-14-cross-session-peer-collaboration.md) Agent Note owns the design. The public vocabulary is catalogued in [docs/subsystems/agent-wait.md](../../docs/subsystems/agent-wait.md).
+The proposed [zero-setup root-peer collaboration](../../.agents/notes/proposed/feature/2026-08-15-zero-setup-root-peer-collaboration.md) Agent Note owns the peer-wait use of this service. The public vocabulary is catalogued in [docs/subsystems/agent-wait.md](../../docs/subsystems/agent-wait.md).

@@ -176,7 +176,7 @@ describe('CommandRuntime', () => {
     ctx.commands.register({ name: 'run', description: 'Run it', handler: seen })
     const controller = new AbortController()
 
-    const execution = await ctx.commands.execute(agent, '/run  untouched ', controller.signal)
+    const execution = await ctx.commands.executeFromUser(agent, '/run  untouched ', controller.signal)
 
     expect(execution?.result).toEqual({ kind: 'success', text: 'ok' })
     expect(execution?.commandId).toBeTruthy()

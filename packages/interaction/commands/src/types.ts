@@ -7,6 +7,9 @@
  * @module @deepseek-ai/dsh-commands/types
  */
 
+// Client-safe subpath: the package root also declares the Host `sessions`
+// service on Context, which collides with the Client face's own declaration.
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { CommandId } from './brand.ts'
 
 /** Immutable metadata for a command's optional unstructured input. */
@@ -51,11 +54,18 @@ export interface CommandDescriptor {
 /**
  * Producer record for one command invocation (the `command/run` event's
  * source slot). Merge-extensible sum type mirroring `MessageSourceMap`'s
- * shape; minimal today because every executor caller is a human-facing UI
- * surface dispatching a human-typed line, so the sole variant is `user`.
+ * shape. `user` is the human-typed UI surface and the executor's default;
+ * an issuer that is not the receiving human merges its own variant so the
+ * lifecycle records the real origin. Attribution only — the executor grants
+ * no authority from this value.
  */
 export interface CommandSourceMap {
   user: { kind: 'user' }
+  /**
+   * Another root session ran this line through lateral peer delivery, so the
+   * receiving human did not type it. `senderSessionId` records which root did.
+   */
+  peer: { kind: 'peer'; senderSessionId: SessionId }
 }
 
 /** The union over {@link CommandSourceMap} — who issued a command line. */

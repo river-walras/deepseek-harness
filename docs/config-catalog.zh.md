@@ -1309,9 +1309,9 @@ export interface Config {
 
 来源：[`packages/feedback/message-feedback/src/index.ts:49`](../packages/feedback/message-feedback/src/index.ts)
 
-<a id="deepseek-aidsh-peer-group-local"></a>
+<a id="deepseek-aidsh-peer-local"></a>
 
-## `@deepseek-ai/dsh-peer-group-local`
+## `@deepseek-ai/dsh-peer-local`
 
 需要：`agents` · `agentWaits` · `sandboxPolicy`
 
@@ -1322,10 +1322,18 @@ export interface Config {
   readonly defaultWaitTimeoutMs: number
   /** Largest timeout a Consumer may request. */
   readonly maxWaitTimeoutMs: number
+  /**
+   * Command names a peer may run in another root's command plane, without the
+   * leading slash. Omitted means every composed command, matching what a human
+   * typing into that session can do. A deployment that does not want one root
+   * changing another's permission or history narrows this list; a name outside
+   * it is delivered as ordinary message text instead.
+   */
+  readonly dispatchableCommands?: string[]
 }
 ```
 
-来源：[`packages/peer-group/peer-group-local/src/index.ts:58`](../packages/peer-group/peer-group-local/src/index.ts)
+来源：[`packages/peer/peer-local/src/index.ts:59`](../packages/peer/peer-local/src/index.ts)
 
 <a id="deepseek-aidsh-permission-presets"></a>
 
@@ -1576,7 +1584,7 @@ export interface JsonRpcConfig {
 
 依赖：`Readable`（`node:stream`）· `Writable`（`node:stream`）
 
-来源：[`packages/sdk/server/src/index.ts:29`](../packages/sdk/server/src/index.ts)
+来源：[`packages/sdk/server/src/index.ts:25`](../packages/sdk/server/src/index.ts)
 
 <a id="deepseek-aidsh-session-persistence-jsonl"></a>
 
@@ -3098,7 +3106,6 @@ export interface Config {
 - `@deepseek-ai/dsh-command-compact` — 需要 `commands` · `compact`（[`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts)）
 - `@deepseek-ai/dsh-command-feedback` — 需要 `commands`（[`packages/feedback/command-feedback/src/index.ts`](../packages/feedback/command-feedback/src/index.ts)）
 - `@deepseek-ai/dsh-command-goal` — 需要 `commands` · `goals`（[`packages/goal/command-goal/src/index.ts`](../packages/goal/command-goal/src/index.ts)）
-- `@deepseek-ai/dsh-command-peer` — 需要 `commands` · `peerGroups`（[`packages/peer-group/command-peer/src/index.ts`](../packages/peer-group/command-peer/src/index.ts)）
 - `@deepseek-ai/dsh-commands`（[`packages/interaction/commands/src/index.ts`](../packages/interaction/commands/src/index.ts)）
 - `@deepseek-ai/dsh-cordis-client-runner`（[`packages/extensions/cordis-client-runner/src/index.ts`](../packages/extensions/cordis-client-runner/src/index.ts)）
 - `@deepseek-ai/dsh-fs-e2b` — 需要 `e2b`（[`packages/e2b/fs-e2b/src/index.ts`](../packages/e2b/fs-e2b/src/index.ts)）
@@ -3123,7 +3130,7 @@ export interface Config {
 - `@deepseek-ai/dsh-tool-ask-user` — 需要 `tools` · `userInteraction`（[`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts)）
 - `@deepseek-ai/dsh-tool-call-timeout-policy` — 需要 `tools`（[`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts)）
 - `@deepseek-ai/dsh-tool-cordis` — 需要 `tools` · `systemPrompt` · `dynamicCordisRunner` · `cordisInspect`（[`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts)）
-- `@deepseek-ai/dsh-tool-peer` — 需要 `tools` · `peerGroups`（[`packages/peer-group/tool-peer/src/index.ts`](../packages/peer-group/tool-peer/src/index.ts)）
+- `@deepseek-ai/dsh-tool-peer` — 需要 `tools` · `peers`（[`packages/peer/tool-peer/src/index.ts`](../packages/peer/tool-peer/src/index.ts)）
 - `@deepseek-ai/dsh-tool-subagent-control` — 需要 `tools` · `subagents`（[`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts)）
 - `@deepseek-ai/dsh-user-questions`（[`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts)）
 - `@deepseek-ai/dsh-workspace` — 需要 `storageDomain` · `sessionPersistence`（[`packages/workspace/workspace/src/index.ts`](../packages/workspace/workspace/src/index.ts)）
@@ -3140,7 +3147,7 @@ export interface Config {
 - `@deepseek-ai/dsh-fs` — 抽象 `FileSystem`（[`packages/fs/fs/src/index.ts`](../packages/fs/fs/src/index.ts)）
 - `@deepseek-ai/dsh-host-directory-picker` — 抽象 `DirectoryPicker`（[`packages/host/directory-picker/src/index.ts`](../packages/host/directory-picker/src/index.ts)）
 - `@deepseek-ai/dsh-jobs` — 抽象 `JobRegistry`（[`packages/jobs/jobs/src/index.ts`](../packages/jobs/jobs/src/index.ts)）
-- `@deepseek-ai/dsh-peer-group` — 抽象 `PeerGroupRegistry`（[`packages/peer-group/peer-group/src/index.ts`](../packages/peer-group/peer-group/src/index.ts)）
+- `@deepseek-ai/dsh-peer` — 抽象 `PeerRegistry`（[`packages/peer/peer/src/index.ts`](../packages/peer/peer/src/index.ts)）
 - `@deepseek-ai/dsh-sandbox` — 抽象 `SandboxProvider`（[`packages/sandbox/sandbox/src/index.ts`](../packages/sandbox/sandbox/src/index.ts)）
 - `@deepseek-ai/dsh-session-persistence` — 抽象 `SessionPersistence`（[`packages/session/session-persistence/src/index.ts`](../packages/session/session-persistence/src/index.ts)）
 - `@deepseek-ai/dsh-session-query` — 抽象 `SessionQueryEngine`（[`packages/session-query/session-query/src/index.ts`](../packages/session-query/session-query/src/index.ts)）

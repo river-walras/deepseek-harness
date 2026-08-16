@@ -1,0 +1,54 @@
+- banner:
+  - navigation "Session hierarchy":
+    - button "Use list_peers exactly once. Then" [disabled]
+  - img
+  - text: Standard mode
+  - button "Session log":
+    - text: Session log
+    - img
+  - tablist:
+    - tab "Chat" [selected]
+    - tab "Trajectory"
+- text: Use list_peers exactly once. Then use send_to_peer exactly once for the peer titled "Snapshot Peer", with message "Reply with exactly PEER_REPLY_OK and nothing else." and wait until idle. After the wait completes, reply with exactly PEER_FLOW_DONE and stop. {{clock}}
+- button "Copy":
+  - img
+- button "Context injection @deepseek-ai/dsh-system-prompt":
+  - img
+  - img
+  - text: Context injection @deepseek-ai/dsh-system-prompt
+- button "Think The user wants me to:":
+  - img
+  - img
+  - text: "Think The user wants me to:"
+- 'button "Tool call list_peers · {}"':
+  - img
+  - img
+  - text: "Tool call list_peers · {}"
+- button "Think The peer titled \"Snapshot Peer\" has session id \"peer-collaboration-target\". Now I need to send a message with wait until idle.":
+  - img
+  - img
+  - text: Think The peer titled "Snapshot Peer" has session id "peer-collaboration-target". Now I need to send a message with wait until idle.
+- button "Tool call send_to_peer · Snapshot Peer":
+  - img
+  - img
+  - text: Tool call send_to_peer · Snapshot Peer
+- paragraph: PEER_FLOW_DONE
+- button "Copy":
+  - img
+- button "Good response":
+  - img
+- button "Bad response":
+  - img
+- button "Branch into a new conversation":
+  - img
+- text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+- textbox "Message the agent"
+- button "Commands":
+  - img
+- 'button "Access mode, current: Workspace Write"': Workspace Write
+- button "Select model, current DeepSeek-V4-Flash, reasoning effort High":
+  - text: DeepSeek-V4-Flash High
+  - img
+- button "1% of context used"
+- button "Send message" [disabled]
+- text: 1 turns · 3 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 66% Input 25.4K tok · Output 251 tok

@@ -258,7 +258,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-来源：[`packages/interaction/commands/src/types.ts:95`](../packages/interaction/commands/src/types.ts)
+来源：[`packages/interaction/commands/src/types.ts:105`](../packages/interaction/commands/src/types.ts)
 
 <a id="commandrun--log-only"></a>
 
@@ -278,7 +278,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'command/run': { commandId: CommandId; name: string; args?: string; source: CommandSource }
 ```
 
-来源：[`packages/interaction/commands/src/types.ts:88`](../packages/interaction/commands/src/types.ts)
+来源：[`packages/interaction/commands/src/types.ts:98`](../packages/interaction/commands/src/types.ts)
 
 ### `compaction/*`
 
@@ -495,23 +495,6 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 ```
 
 来源：[`packages/llm/llm-retry/src/types.ts:11`](../packages/llm/llm-retry/src/types.ts)
-
-### `peer-group/*`
-
-<a id="peer-groupmembership-removed--log-only"></a>
-
-#### `peer-group/membership-removed` — log-only
-
-```ts persistence-catalog
-/** Informational record that a later policy change revoked this membership. */
-'peer-group/membership-removed': {
-  readonly groupId: PeerGroupId
-  readonly incarnation: PeerMembershipIncarnation
-  readonly reason: 'second-writer'
-}
-```
-
-来源：[`packages/peer-group/peer-group/src/types.ts:173`](../packages/peer-group/peer-group/src/types.ts)
 
 ### `permission/*`
 

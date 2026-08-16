@@ -38,12 +38,12 @@ describe('dsh-base bundle', () => {
     expect(rows.filter(row => row.id === 'subagent-codex')).toHaveLength(0)
     expect(rows.filter(row => row.id === 'subagent-claude-code')).toHaveLength(0)
     expect(rows.find(row => row.id === 'agent-wait-local')?.config).toEqual({ retainedTransitionLimit: 512 })
-    expect(rows.find(row => row.id === 'peer-group-local')?.config).toEqual({
+    expect(rows.find(row => row.id === 'peer-local')?.config).toEqual({
       defaultWaitTimeoutMs: 300000,
       maxWaitTimeoutMs: 1800000,
     })
     expect(rows.filter(row => row.id === 'agent-wait-interaction')).toHaveLength(1)
-    expect(rows.filter(row => row.id === 'command-peer')).toHaveLength(1)
+    expect(rows.filter(row => row.id === 'command-peer')).toHaveLength(0)
     expect(rows.filter(row => row.id === 'tool-peer')).toHaveLength(1)
     expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-codex')
     expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-claude-code')
